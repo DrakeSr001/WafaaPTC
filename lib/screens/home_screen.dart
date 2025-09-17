@@ -14,28 +14,57 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Wafaa PT Center')),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('Welcome! Tap the button to scan the kiosk QR.'),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: () => Navigator.pushNamed(context, '/scan'),
-                icon: const Icon(Icons.qr_code_scanner),
-                label: const Text('Scan Kiosk'),
+      appBar: AppBar(
+        title: const Text('مركز العلاج الطبيعي - الوفاء و الأمل' , style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold), ),
+        centerTitle: true,
+      ),
+      body: Stack(
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 500.0),
+            child: Center(
+              child: Opacity(
+                opacity: 1,
+                child: SizedBox(
+                  width: 300, // Adjust width as needed
+                  child: Image.asset(
+                    "images/gameya.png",
+                    fit: BoxFit.contain,
+                  ),
+                ),
               ),
-              const SizedBox(height: 24),
-              TextButton(
-                onPressed: () => _logout(context),
-                child: const Text('Logout'),
-              ),
-            ],
+            ),
           ),
-        ),
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Tap the button to scan the kiosk QR.',
+                    style: TextStyle(
+                      color: Color.fromARGB(255, 0, 0, 0),
+                      fontSize: 16,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () => Navigator.pushNamed(context, '/scan'),
+                    icon: const Icon(Icons.qr_code_scanner),
+                    label: const Text('Scan Kiosk'),
+                  ),
+                  const SizedBox(height: 24),
+                  TextButton(
+                    onPressed: () => _logout(context),
+                    child: const Text('Logout'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

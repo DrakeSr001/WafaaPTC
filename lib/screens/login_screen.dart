@@ -11,8 +11,8 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _form = GlobalKey<FormState>();
-  final _email = TextEditingController(text: 'doctor@example.com'); // for dev
-  final _password = TextEditingController(text: 'Password123!');    // for dev
+  final _email = TextEditingController(text: ''); // for dev
+  final _password = TextEditingController(text: '');    // for dev
   bool _busy = false;
   String? _err;
 
@@ -45,51 +45,66 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Column(mainAxisAlignment: MainAxisAlignment.center,
+      appBar: AppBar(centerTitle: true, title: const Text('مركز العلاج الطبيعي - الوفاء و الأمل', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold), )),
+      body: Stack(
         children: [
-          const Text('Welcome, Login into your account.', style: TextStyle(fontSize: 16),),
-        ],
-      )),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Form(
-              key: _form,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(
-                    controller: _email,
-                    decoration: const InputDecoration(labelText: 'Email'),
-                    keyboardType: TextInputType.emailAddress,
-                    validator: (v) => (v==null || v.isEmpty) ? 'Enter email' : null,
+          Padding(
+            padding: const EdgeInsets.only(bottom: 500.0),
+            child: Center(
+              child: Opacity(
+                opacity: 1, // Change to 0.4 if you want semi-transparent
+                child: SizedBox(
+                  width: 300,
+                  child: Image.asset(
+                    "images/gameya.png",
+                    fit: BoxFit.contain,
                   ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _password,
-                    decoration: const InputDecoration(labelText: 'Password'),
-                    obscureText: true,
-                    validator: (v) => (v==null || v.length<6) ? 'Min 6 chars' : null,
-                  ),
-                  const SizedBox(height: 16),
-                  if (_err != null) ...[
-                    Text(_err!, style: const TextStyle(color: Colors.red)),
-                    const SizedBox(height: 8),
-                  ],
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _busy ? null : _submit,
-                      child: _busy ? const CircularProgressIndicator() : const Text('Login'),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
-        ),
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Form(
+                  key: _form,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextFormField(
+                        controller: _email,
+                        decoration: const InputDecoration(labelText: 'Email'),
+                        keyboardType: TextInputType.emailAddress,
+                        validator: (v) => (v==null || v.isEmpty) ? 'Enter email' : null,
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _password,
+                        decoration: const InputDecoration(labelText: 'Password'),
+                        obscureText: true,
+                        validator: (v) => (v==null || v.length<6) ? 'Min 6 chars' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      if (_err != null) ...[
+                        Text(_err!, style: const TextStyle(color: Colors.red)),
+                        const SizedBox(height: 8),
+                      ],
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _busy ? null : _submit,
+                          child: _busy ? const CircularProgressIndicator() : const Text('Login'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
