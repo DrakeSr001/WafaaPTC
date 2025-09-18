@@ -208,7 +208,8 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
     return Scaffold(
       appBar: AppBar(
         title: Text('Admin — $header'),
-        bottom: const TabBar(
+        bottom: TabBar(
+          controller: _tab,
           tabs: [
             Tab(icon: Icon(Icons.download), text: 'Exports'),
             Tab(icon: Icon(Icons.person_add), text: 'Create User'),
@@ -247,7 +248,9 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
                         onChanged: (v) => setState(() => _selectedDoctor = v),
                       ),
                       const SizedBox(height: 24),
-                      Row(
+                      Wrap(
+                        spacing:  12,
+                        runSpacing: 8,
                         children: [
                           ElevatedButton.icon(
                             onPressed: (_selectedDoctor == null || _busy) ? null : _exportDoctorCsv,
