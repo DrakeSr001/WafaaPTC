@@ -19,12 +19,16 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    // if token exists, go to home
-    TokenStorage.read().then((t) {
-      if (t != null && mounted) {
-        Navigator.pushReplacementNamed(context, '/home');
+    () async {
+      final t = await TokenStorage.read();
+      final role = await TokenStorage.readRole();
+      if (mounted && t != null) {
+        Navigator.pushReplacementNamed(
+          context,
+          (role ?? 'doctor').toLowerCase() == 'admin' ? '/admin' : '/home',
+        );
       }
-    });
+    }();
   }
 
   Future<void> _submit() async {
@@ -32,10 +36,11 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() { _busy = true; _err = null; });
     try {
       final api = ApiClient();
-      await api.login(_email.text.trim(), _password.text.trim());
+      final user = await api.loginAndGetUser(_email.text.trim(), _password.text.trim());
       if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/home');
-    } catch (e) {
+      final role = (user['role'] as String? ?? 'doctor').toLowerCase();
+      Navigator.pushReplacementNamed(context, role == 'admin' ? '/admin' : '/home');
+    } catch (_) {
       setState(() => _err = 'Login failed. Check email/password.');
     } finally {
       if (mounted) setState(() => _busy = false);

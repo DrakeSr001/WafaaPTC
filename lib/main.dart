@@ -3,6 +3,7 @@ import 'package:wafaaptc/screens/scan_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/month_history_screen.dart';
+import 'screens/admin_screen.dart';
 
 void main() {
   runApp(const DoctorApp());
@@ -26,6 +27,7 @@ class DoctorApp extends StatelessWidget {
         '/home' : (_) => const HomeScreen(),
         '/scan' : (_) => const ScanScreen(),
         '/history-month': (_) => const MonthHistoryScreen(), // ⬅️ add this
+        '/admin': (_) => const AdminScreen(), // ⬅️ admin landing
       },
     );
   }

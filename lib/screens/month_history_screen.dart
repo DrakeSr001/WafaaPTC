@@ -19,6 +19,7 @@ class _MonthHistoryScreenState extends State<MonthHistoryScreen> {
   String? _error;
   List<dynamic> _days = [];
   bool _exporting = false;
+  String _totalHours = '00:00'; // <-- Add this line
 
   @override
   void initState() {
@@ -36,7 +37,10 @@ class _MonthHistoryScreenState extends State<MonthHistoryScreen> {
     try {
       final res =
           await _api.myMonth(year: _selected.year, month: _selected.month);
-      setState(() => _days = List<dynamic>.from(res['days'] as List));
+      setState(() {
+        _days = List<dynamic>.from(res['days'] as List);
+        _totalHours = (res['totalHours'] as String?) ?? '00:00'; // <-- Store totalHours
+      });
     } catch (e) {
       setState(() => _error = 'Failed to load month.');
     } finally {
@@ -129,27 +133,44 @@ class _MonthHistoryScreenState extends State<MonthHistoryScreen> {
                     ],
                   ),
                 )
-              : ListView.separated(
-                  itemCount: _days.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
-                  itemBuilder: (_, i) {
-                    final row = _days[i] as Map<String, dynamic>;
-                    final iso = row['date'] as String?; // "YYYY-MM-DD"
-                    final inStr = (row['in'] as String?) ?? '—';
-                    final outStr = (row['out'] as String?) ?? '—';
+              : Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Total this month: $_totalHours',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    const Divider(height: 1),
+                    Expanded(
+                      child: ListView.separated(
+                        itemCount: _days.length,
+                        separatorBuilder: (_, __) => const Divider(height: 1),
+                        itemBuilder: (_, i) {
+                          final row = _days[i] as Map<String, dynamic>;
+                          final iso = row['date'] as String?;
+                          final inStr = (row['in'] as String?) ?? '—';
+                          final outStr = (row['out'] as String?) ?? '—';
+                          final hrs = (row['hours'] as String?) ?? '00:00';
 
-                    // Display as MM/DD/YY
-                    final d = iso == null
-                        ? null
-                        : DateTime.tryParse('${iso}T00:00:00');
-                    final dateStr = d == null
-                        ? (iso ?? '')
-                        : DateFormat('MM/dd/yy').format(d);
+                          // Display as MM/DD/YY
+                          final d = iso == null
+                              ? null
+                              : DateTime.tryParse('${iso}T00:00:00');
+                          final dateStr = d == null
+                              ? (iso ?? '')
+                              : DateFormat('MM/dd/yy').format(d);
 
-                    return ListTile(
-                      title: Text('$dateStr  —  IN: $inStr  —  OUT: $outStr'),
-                    );
-                  },
+                          return ListTile(
+                            title: Text('$dateStr  —  IN: $inStr  —  OUT: $outStr'),
+                            subtitle: Text('Hours: $hrs'),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
     );
   }
