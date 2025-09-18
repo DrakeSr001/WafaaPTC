@@ -15,7 +15,10 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('مركز العلاج الطبيعي - الوفاء و الأمل' , style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold), ),
+        title: const Text(
+          'مركز العلاج الطبيعي - الوفاء و الأمل',
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
       ),
       body: Stack(
@@ -54,6 +57,13 @@ class HomeScreen extends StatelessWidget {
                     onPressed: () => Navigator.pushNamed(context, '/scan'),
                     icon: const Icon(Icons.qr_code_scanner),
                     label: const Text('Scan Kiosk'),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () =>
+                        Navigator.pushNamed(context, '/history-month'),
+                    icon: const Icon(Icons.calendar_month),
+                    label: const Text('History by Month'),
                   ),
                   const SizedBox(height: 24),
                   TextButton(
