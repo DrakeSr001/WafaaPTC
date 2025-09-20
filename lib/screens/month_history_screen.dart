@@ -1,9 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../services/api_client.dart';
-import '../services/file_utils.dart';
+import '../utils/download.dart';
 
 class MonthHistoryScreen extends StatefulWidget {
   const MonthHistoryScreen({super.key});
@@ -70,14 +69,7 @@ class _MonthHistoryScreenState extends State<MonthHistoryScreen> {
           await _api.myMonthCsv(year: _selected.year, month: _selected.month);
       final mm = _selected.month.toString().padLeft(2, '0');
       final yy = _selected.year;
-      final path = await saveTextFile('my-attendance-$yy-$mm.csv', csv);
-
-      await Share.shareXFiles([XFile(path)], text: 'My attendance for $mm/$yy');
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('CSV saved & ready to share: $path')),
-      );
+      await saveAndShareTextFile('my-attendance-$yy-$mm.csv', csv);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -95,7 +87,7 @@ class _MonthHistoryScreenState extends State<MonthHistoryScreen> {
         DateFormat('MMMM yyyy').format(_selected); // e.g., September 2025
     return Scaffold(
       appBar: AppBar(
-        title: Text('My History — $header'),
+        title: Text('My History â€” $header'),
         actions: [
           IconButton(
             onPressed: _pickMonth,
@@ -151,8 +143,8 @@ class _MonthHistoryScreenState extends State<MonthHistoryScreen> {
                         itemBuilder: (_, i) {
                           final row = _days[i] as Map<String, dynamic>;
                           final iso = row['date'] as String?;
-                          final inStr = (row['in'] as String?) ?? '—';
-                          final outStr = (row['out'] as String?) ?? '—';
+                          final inStr = (row['in'] as String?) ?? 'â€”';
+                          final outStr = (row['out'] as String?) ?? 'â€”';
                           final hrs = (row['hours'] as String?) ?? '00:00';
 
                           // Display as MM/DD/YY
@@ -164,7 +156,7 @@ class _MonthHistoryScreenState extends State<MonthHistoryScreen> {
                               : DateFormat('MM/dd/yy').format(d);
 
                           return ListTile(
-                            title: Text('$dateStr  —  IN: $inStr  —  OUT: $outStr'),
+                            title: Text('$dateStr  â€”  IN: $inStr  â€”  OUT: $outStr'),
                             subtitle: Text('Hours: $hrs'),
                           );
                         },
@@ -175,3 +167,11 @@ class _MonthHistoryScreenState extends State<MonthHistoryScreen> {
     );
   }
 }
+
+
+
+
+
+
+
+

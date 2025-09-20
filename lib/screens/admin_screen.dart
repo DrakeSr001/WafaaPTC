@@ -1,10 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../services/api_client.dart';
-import '../services/file_utils.dart';
 import '../services/token_storage.dart';
+import '../utils/download.dart';
 
 class AdminScreen extends StatefulWidget {
   const AdminScreen({super.key});
@@ -109,8 +108,7 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
       final csv = await _api.doctorMonthCsv(userId: uid, year: y, month: m);
       final mm = m.toString().padLeft(2, '0');
       final namePart = (_selectedDoctor!['name'] as String).replaceAll(' ', '_');
-      final path = await saveTextFile('doctor-$namePart-$y-$mm.csv', csv);
-      await Share.shareXFiles([XFile(path)], text: 'Doctor $namePart $mm/$y');
+      await saveAndShareTextFile('doctor-$namePart-$y-$mm.csv', csv);
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Export failed.')));
@@ -126,8 +124,7 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
       final y = _selectedMonth.year, m = _selectedMonth.month;
       final csv = await _api.clinicMonthCsv(year: y, month: m);
       final mm = m.toString().padLeft(2, '0');
-      final path = await saveTextFile('clinic-$y-$mm.csv', csv);
-      await Share.shareXFiles([XFile(path)], text: 'Clinic $mm/$y');
+      await saveAndShareTextFile('clinic-$y-$mm.csv', csv);
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Export failed.')));
@@ -207,7 +204,7 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
     final header = DateFormat('MMMM yyyy').format(_selectedMonth);
     return Scaffold(
       appBar: AppBar(
-        title: Text('Admin — $header'),
+        title: Text('Admin â€” $header'),
         bottom: TabBar(
           controller: _tab,
           tabs: [
@@ -630,7 +627,7 @@ class _DevicesManagerState extends State<_DevicesManager> {
           final active = (d['isActive'] as bool? ?? true);
           return ListTile(
             title: Text(d['name'] as String? ?? ''),
-            subtitle: Text('Location: ${(d['location'] as String?) ?? '—'}\nKey: ${(d['apiKey'] as String?) ?? '—'}'),
+            subtitle: Text('Location: ${(d['location'] as String?) ?? 'â€”'}\nKey: ${(d['apiKey'] as String?) ?? 'â€”'}'),
             isThreeLine: true,
             trailing: Wrap(
               spacing: 8,
@@ -663,3 +660,12 @@ class _DevicesManagerState extends State<_DevicesManager> {
     );
   }
 }
+
+
+
+
+
+
+
+
+

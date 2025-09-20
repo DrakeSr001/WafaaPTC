@@ -1,12 +1,47 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../services/api_client.dart';
+import '../services/pending_scan.dart';
 import '../services/token_storage.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
-  Future<void> _logout(BuildContext context) async {
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    if (kIsWeb) {
+      Future.microtask(_handlePendingScan);
+    }
+  }
+
+  Future<void> _handlePendingScan() async {
+    final code = PendingScan.readFromUrl();
+    if (code == null) return;
+    await Future.delayed(const Duration(milliseconds: 250));
+    final api = ApiClient();
+    try {
+      final res = await api.scanAttendance(code);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Scanned: ${res['action']} at ${res['at']}')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Scan failed (expired or invalid code).')),
+      );
+    }
+  }
+
+  Future<void> _logout() async {
     await TokenStorage.clear();
-    if (context.mounted) {
+    if (mounted) {
       Navigator.pushNamedAndRemoveUntil(context, '/login', (_) => false);
     }
   }
@@ -16,7 +51,7 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'مركز العلاج الطبيعي - الوفاء و الأمل',
+          'U.Oï¿½Uï¿½Oï¿½ O\u0015U,O1U,O\u0015Oï¿½ O\u0015U,Oï¿½O"USO1US - O\u0015U,U^U?O\u0015Oï¿½ U^ O\u0015U,Oï¿½U.U,',
           style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
@@ -29,7 +64,7 @@ class HomeScreen extends StatelessWidget {
               child: Opacity(
                 opacity: 1,
                 child: SizedBox(
-                  width: 300, // Adjust width as needed
+                  width: 300,
                   child: Image.asset(
                     "images/gameya.png",
                     fit: BoxFit.contain,
@@ -67,7 +102,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
                   TextButton(
-                    onPressed: () => _logout(context),
+                    onPressed: _logout,
                     child: const Text('Logout'),
                   ),
                 ],
