@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:wafaaptc/screens/scan_screen.dart';
 import 'screens/login_screen.dart';
+import 'config.dart';
 import 'screens/home_screen.dart';
 import 'screens/month_history_screen.dart';
 import 'screens/admin_screen.dart';
@@ -15,7 +16,7 @@ class DoctorApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'مركز العلاج الطبيعي - فرع الوفاء و الأمل',
+      title: arabicAppTitle,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
@@ -26,8 +27,8 @@ class DoctorApp extends StatelessWidget {
         '/login': (_) => const LoginScreen(),
         '/home' : (_) => const HomeScreen(),
         '/scan' : (_) => const ScanScreen(),
-        '/history-month': (_) => const MonthHistoryScreen(), // ⬅️ add this
-        '/admin': (_) => const AdminScreen(), // ⬅️ admin landing
+        '/history-month': (_) => const MonthHistoryScreen(), // <- add this
+        '/admin': (_) => const AdminScreen(), // <- admin landing
       },
     );
   }

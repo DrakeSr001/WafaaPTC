@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../services/api_client.dart';
 
@@ -20,12 +20,12 @@ class _ScanScreenState extends State<ScanScreen> {
 
   Future<void> _handleCode(String code) async {
     if (_busy) return;
-    setState(() { _busy = true; _status = 'Submitting…'; });
+    setState(() { _busy = true; _status = 'Submitting...'; });
 
     try {
       final api = ApiClient();
       final res = await api.scanAttendance(code);
-      setState(() => _status = '✔ ${res['action']} at ${res['at']}');
+      setState(() => _status = 'Success: ${res['action']} at ${res['at']}');
       if (!mounted) return;
       // show a toast-like message
       ScaffoldMessenger.of(context).showSnackBar(
@@ -35,7 +35,7 @@ class _ScanScreenState extends State<ScanScreen> {
       await Future.delayed(const Duration(seconds: 1));
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      setState(() => _status = '✘ Failed. Try again with a fresh QR.');
+      setState(() => _status = 'Failed. Try again with a fresh QR.');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Failed: invalid/expired code or network')),
       );

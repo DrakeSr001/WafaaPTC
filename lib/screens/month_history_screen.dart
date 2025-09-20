@@ -87,7 +87,7 @@ class _MonthHistoryScreenState extends State<MonthHistoryScreen> {
         DateFormat('MMMM yyyy').format(_selected); // e.g., September 2025
     return Scaffold(
       appBar: AppBar(
-        title: Text('My History â€” $header'),
+        title: Text('My History - $header'),
         actions: [
           IconButton(
             onPressed: _pickMonth,
@@ -143,8 +143,8 @@ class _MonthHistoryScreenState extends State<MonthHistoryScreen> {
                         itemBuilder: (_, i) {
                           final row = _days[i] as Map<String, dynamic>;
                           final iso = row['date'] as String?;
-                          final inStr = (row['in'] as String?) ?? 'â€”';
-                          final outStr = (row['out'] as String?) ?? 'â€”';
+                          final inStr = (row['in'] as String?) ?? '-';
+                          final outStr = (row['out'] as String?) ?? '-';
                           final hrs = (row['hours'] as String?) ?? '00:00';
 
                           // Display as MM/DD/YY
@@ -156,7 +156,7 @@ class _MonthHistoryScreenState extends State<MonthHistoryScreen> {
                               : DateFormat('MM/dd/yy').format(d);
 
                           return ListTile(
-                            title: Text('$dateStr  â€”  IN: $inStr  â€”  OUT: $outStr'),
+                            title: Text('$dateStr  -  IN: $inStr  -  OUT: $outStr'),
                             subtitle: Text('Hours: $hrs'),
                           );
                         },

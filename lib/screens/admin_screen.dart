@@ -204,7 +204,7 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
     final header = DateFormat('MMMM yyyy').format(_selectedMonth);
     return Scaffold(
       appBar: AppBar(
-        title: Text('Admin â€” $header'),
+        title: Text('Admin - $header'),
         bottom: TabBar(
           controller: _tab,
           tabs: [
@@ -627,7 +627,7 @@ class _DevicesManagerState extends State<_DevicesManager> {
           final active = (d['isActive'] as bool? ?? true);
           return ListTile(
             title: Text(d['name'] as String? ?? ''),
-            subtitle: Text('Location: ${(d['location'] as String?) ?? 'â€”'}\nKey: ${(d['apiKey'] as String?) ?? 'â€”'}'),
+            subtitle: Text('Location: ${(d['location'] as String?) ?? '-'}\nKey: ${(d['apiKey'] as String?) ?? '-'}'),
             isThreeLine: true,
             trailing: Wrap(
               spacing: 8,

@@ -1,6 +1,7 @@
-import 'package:flutter/foundation.dart';
+﻿import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../services/api_client.dart';
+import '../config.dart';
 import '../services/pending_scan.dart';
 import '../services/token_storage.dart';
 
@@ -51,7 +52,8 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'U.Oï¿½Uï¿½Oï¿½ O\u0015U,O1U,O\u0015Oï¿½ O\u0015U,Oï¿½O"USO1US - O\u0015U,U^U?O\u0015Oï¿½ U^ O\u0015U,Oï¿½U.U,',
+          arabicAppTitle,
+          textDirection: TextDirection.rtl,
           style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
