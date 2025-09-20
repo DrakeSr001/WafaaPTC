@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../services/api_client.dart';
 
@@ -68,6 +69,10 @@ class _ScanScreenState extends State<ScanScreen> {
   Future<void> _handleCode(String raw) async {
     if (_busy) return;
     final code = _extractCode(raw);
+    // ignore: avoid_print
+    print('scan raw: ' + raw);
+    // ignore: avoid_print
+    print('scan normalized code: ' + (code ?? 'null'));
     if (code == null) {
       setState(() => _status = 'Invalid QR. Try again.');
       if (mounted) {
@@ -82,7 +87,7 @@ class _ScanScreenState extends State<ScanScreen> {
     try {
       final api = ApiClient();
       final res = await api.scanAttendance(code);
-      setState(() => _status = 'Success: ${res['action']} at ${res['at']}');
+      setState(() => _status = 'Success: ${res['action']} at ${res['at']}' );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Recorded ${res['action']}')),
@@ -90,15 +95,31 @@ class _ScanScreenState extends State<ScanScreen> {
       await Future.delayed(const Duration(seconds: 1));
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      setState(() => _status = 'Failed. Try again with a fresh QR.');
+      var message = 'Failed: invalid/expired code or network';
+      if (e is DioException) {
+        final data = e.response?.data;
+        final status = e.response?.statusCode;
+        if (data is Map && data['message'] is String && (data['message'] as String).isNotEmpty) {
+          message = 'Failed (' + (status?.toString() ?? '') + '): ' + (data['message'] as String);
+        } else if (e.message != null && e.message!.isNotEmpty) {
+          message = 'Failed (' + (status?.toString() ?? '') + '): ' + e.message!;
+        } else if (status != null) {
+          message = 'Failed (' + status.toString() + ')';
+        }
+        // ignore: avoid_print
+        print('scanAttendance dio error: status=' + (e.response?.statusCode?.toString() ?? '-') + ' data=' + (e.response?.data?.toString() ?? '-') );
+      } else {
+        // ignore: avoid_print
+        print('scanAttendance unexpected error: ' + e.toString());
+      }
+      setState(() => _status = message);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed: invalid/expired code or network')),
+        SnackBar(content: Text(message)),
       );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
-
   @override
   void dispose() {
     _controller.dispose();
@@ -138,5 +159,15 @@ class _ScanScreenState extends State<ScanScreen> {
     );
   }
 }
+
+
+
+
+
+
+
+
+
+
 
 
