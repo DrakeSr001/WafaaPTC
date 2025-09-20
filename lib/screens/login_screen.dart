@@ -1,5 +1,6 @@
 ﻿import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import '../services/api_client.dart';
 import '../config.dart';
 import '../services/pending_scan.dart';
@@ -13,6 +14,27 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  String _scanErrorMessage(Object error) {
+    if (error is DioException) {
+      final data = error.response?.data;
+      final status = error.response?.statusCode;
+      if (data is Map && data['message'] is String) {
+        final raw = (data['message'] as String).trim();
+        switch (raw) {
+          case 'daily_limit_reached':
+            return 'Scan blocked: already checked out today.';
+          case 'invalid':
+          case 'expired':
+            return 'Scan failed: invalid or expired code.';
+          default:
+            final code = status?.toString() ?? 'error';
+            return 'Scan failed (' + code + '): ' + raw;
+        }
+      }
+    }
+    return 'Scan failed (expired or invalid code).';
+  }
+
   final _form = GlobalKey<FormState>();
   final _email = TextEditingController(text: ''); // for dev
   final _password = TextEditingController(text: ''); // for dev
@@ -63,11 +85,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     content: Text('Scanned: ${res['action']} at ${res['at']}')),
               );
             }
-          } catch (_) {
+          } catch (err) {
             if (mounted) {
+              final msg = _scanErrorMessage(err);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                    content: Text('Scan failed (expired or invalid code).')),
+                SnackBar(content: Text(msg)),
               );
             }
           }
