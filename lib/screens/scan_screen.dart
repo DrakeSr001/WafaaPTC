@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../services/api_client.dart';
 
@@ -18,8 +18,65 @@ class _ScanScreenState extends State<ScanScreen> {
   bool _busy = false;
   String? _status;
 
-  Future<void> _handleCode(String code) async {
+  String? _extractCode(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return null;
+
+    if (!trimmed.contains('://') && !trimmed.contains('?')) {
+      return trimmed.length >= 10 ? trimmed : null;
+    }
+
+    final uri = Uri.tryParse(trimmed);
+    if (uri != null) {
+      final queryCode = uri.queryParameters['code'];
+      if (queryCode != null && queryCode.trim().length >= 10) {
+        return queryCode.trim();
+      }
+
+      if (uri.fragment.isNotEmpty) {
+        final frag = uri.fragment;
+        final qIndex = frag.indexOf('?');
+        if (qIndex != -1) {
+          try {
+            final fragParams = Uri.splitQueryString(frag.substring(qIndex + 1));
+            final fragCode = fragParams['code'];
+            if (fragCode != null && fragCode.trim().length >= 10) {
+              return fragCode.trim();
+            }
+          } catch (_) {
+            // ignore malformed fragments
+          }
+        }
+      }
+    }
+
+    if (trimmed.startsWith('?')) {
+      try {
+        final params = Uri.splitQueryString(trimmed.substring(1));
+        final queryCode = params['code'];
+        if (queryCode != null && queryCode.trim().length >= 10) {
+          return queryCode.trim();
+        }
+      } catch (_) {
+        // ignore
+      }
+    }
+
+    return null;
+  }
+
+  Future<void> _handleCode(String raw) async {
     if (_busy) return;
+    final code = _extractCode(raw);
+    if (code == null) {
+      setState(() => _status = 'Invalid QR. Try again.');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Invalid QR. Please scan the kiosk code.')),
+        );
+      }
+      return;
+    }
     setState(() { _busy = true; _status = 'Submitting...'; });
 
     try {
@@ -27,11 +84,9 @@ class _ScanScreenState extends State<ScanScreen> {
       final res = await api.scanAttendance(code);
       setState(() => _status = 'Success: ${res['action']} at ${res['at']}');
       if (!mounted) return;
-      // show a toast-like message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Recorded ${res['action']}')),
       );
-      // go back after a short delay
       await Future.delayed(const Duration(seconds: 1));
       if (mounted) Navigator.pop(context);
     } catch (e) {
@@ -83,3 +138,5 @@ class _ScanScreenState extends State<ScanScreen> {
     );
   }
 }
+
+
