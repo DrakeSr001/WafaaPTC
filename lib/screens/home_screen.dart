@@ -116,7 +116,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ElevatedButton.icon(
                     onPressed: () => Navigator.pushNamed(context, '/scan'),
                     icon: const Icon(Icons.qr_code_scanner),
-                    label: const Text('Scan Kiosk'),
+                    label: const Text('Scan QR Code'),
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton.icon(
