@@ -108,6 +108,14 @@ class ApiClient {
     await dio.patch('/admin/users/$id/password', data: {'password': newPassword});
   }
 
+  Future<void> setUserDevice(String id, String deviceId) async {
+    await dio.patch('/admin/users/$id/device', data: {'deviceId': deviceId});
+  }
+
+  Future<void> clearUserDevice(String id) async {
+    await dio.delete('/admin/users/$id/device');
+  }
+
   Future<void> deleteUser(String id) async {
     await dio.delete('/admin/users/$id');
   }

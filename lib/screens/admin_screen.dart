@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../services/api_client.dart';
@@ -457,6 +457,96 @@ class _UsersManagerState extends State<_UsersManager> {
     }
   }
 
+
+  Future<void> _bindDevice(Map<String, dynamic> u) async {
+    final id = u['id'] as String;
+    final ctrl = TextEditingController();
+    final deviceId = await showDialog<String>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Bind Device"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text("Paste the Device ID shown on the doctor's login screen."),
+            const SizedBox(height: 12),
+            TextField(
+              controller: ctrl,
+              decoration: const InputDecoration(labelText: "Device ID"),
+              autofocus: true,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, null), child: const Text("Cancel")),
+          ElevatedButton(onPressed: () => Navigator.pop(context, ctrl.text.trim()), child: const Text("Bind")),
+        ],
+      ),
+    );
+    final trimmed = deviceId?.trim();
+    ctrl.dispose();
+    if (trimmed == null) return;
+    if (trimmed.length < 3 || trimmed.length > 128) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Device ID must be between 3 and 128 characters.")),
+        );
+      }
+      return;
+    }
+    try {
+      await widget.api.setUserDevice(id, trimmed);
+      await _load();
+      await widget.reloadDoctors();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Device ID saved.")));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Failed to bind device.")));
+      }
+    }
+  }
+
+  Future<void> _clearDevice(Map<String, dynamic> u) async {
+    final id = u['id'] as String;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Clear Device?"),
+        content: const Text("The doctor will need to provide a new Device ID on next login."),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
+          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text("Clear")),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    try {
+      await widget.api.clearUserDevice(id);
+      await _load();
+      await widget.reloadDoctors();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Device binding cleared.")));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Failed to clear device.")));
+      }
+    }
+  }
+
+  String _formatDeviceBound(String? iso) {
+    if (iso == null || iso.isEmpty) return "-";
+    try {
+      final dt = DateTime.parse(iso).toLocal();
+      return DateFormat("yyyy-MM-dd HH:mm").format(dt);
+    } catch (_) {
+      return iso;
+    }
+  }
+
   Future<void> _delete(Map<String, dynamic> u) async {
     final id = u['id'] as String;
     final ok = await showDialog<bool>(
@@ -489,9 +579,16 @@ class _UsersManagerState extends State<_UsersManager> {
         itemBuilder: (_, i) {
           final u = _users[i];
           final active = (u['isActive'] as bool? ?? true);
+          final hasDevice = (u['hasDevice'] as bool? ?? false);
+          final deviceBoundAt = u['deviceBoundAt'] as String?;
+          final email = u['email'] as String? ?? '';
+          final deviceStatus = hasDevice
+              ? "Device: registered ${_formatDeviceBound(deviceBoundAt)}"
+              : "Device: not registered";
+          final subtitleText = [email, deviceStatus].where((line) => line.isNotEmpty).join("\n");
           return ListTile(
             title: Text(u['name'] as String? ?? ''),
-            subtitle: Text(u['email'] as String? ?? ''),
+            subtitle: Text(subtitleText),
             trailing: Wrap(
               spacing: 8,
               children: [
@@ -500,6 +597,17 @@ class _UsersManagerState extends State<_UsersManager> {
                   icon: Icon(active ? Icons.visibility_off : Icons.visibility),
                   onPressed: () => _toggleActive(u),
                 ),
+                IconButton(
+                  tooltip: hasDevice ? 'Update device' : 'Bind device',
+                  icon: Icon(hasDevice ? Icons.link : Icons.link_outlined),
+                  onPressed: () => _bindDevice(u),
+                ),
+                if (hasDevice)
+                  IconButton(
+                    tooltip: 'Clear device',
+                    icon: const Icon(Icons.link_off),
+                    onPressed: () => _clearDevice(u),
+                  ),
                 IconButton(
                   tooltip: 'Reset password',
                   icon: const Icon(Icons.password),
@@ -660,6 +768,10 @@ class _DevicesManagerState extends State<_DevicesManager> {
     );
   }
 }
+
+
+
+
 
 
 
