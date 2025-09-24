@@ -30,7 +30,7 @@ class _LoginScreenState extends State<LoginScreen> {
             return 'Scan failed: invalid or expired code.';
           default:
             final code = status?.toString() ?? 'error';
-            return 'Scan failed (' + code + '): ' + raw;
+            return 'Scan failed ($code): $raw';
         }
       }
     }

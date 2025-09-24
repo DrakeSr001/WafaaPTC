@@ -1,4 +1,4 @@
-﻿import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import '../services/api_client.dart';
@@ -28,7 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
             return 'Scan failed: invalid or expired code.';
           default:
             final code = status?.toString() ?? 'error';
-            return 'Scan failed (' + code + '): ' + raw;
+            return 'Scan failed ($code): $raw';
         }
       }
     }

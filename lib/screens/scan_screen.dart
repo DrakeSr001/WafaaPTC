@@ -70,9 +70,9 @@ class _ScanScreenState extends State<ScanScreen> {
     if (_busy) return;
     final code = _extractCode(raw);
     // ignore: avoid_print
-    print('scan raw: ' + raw);
+    print('scan raw: $raw');
     // ignore: avoid_print
-    print('scan normalized code: ' + (code ?? 'null'));
+    print('scan normalized code: ${code ?? 'null'}');
     if (code == null) {
       setState(() => _status = 'Invalid QR. Try again.');
       if (mounted) {
@@ -82,13 +82,16 @@ class _ScanScreenState extends State<ScanScreen> {
       }
       return;
     }
-    setState(() { _busy = true; _status = 'Submitting...'; });
+    setState(() {
+      _busy = true;
+      _status = 'Submitting...';
+    });
 
     try {
       final api = ApiClient();
       final res = await api.scanAttendance(code);
-      setState(() => _status = 'Success: ${res['action']} at ${res['at']}' );
       if (!mounted) return;
+      setState(() => _status = 'Success: ${res['action']} at ${res['at']}');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Recorded ${res['action']}')),
       );
@@ -99,27 +102,31 @@ class _ScanScreenState extends State<ScanScreen> {
       if (e is DioException) {
         final data = e.response?.data;
         final status = e.response?.statusCode;
+        final statusLabel = status != null ? ' ($status)' : '';
         if (data is Map && data['message'] is String && (data['message'] as String).isNotEmpty) {
-          message = 'Failed (' + (status?.toString() ?? '') + '): ' + (data['message'] as String);
+          message = 'Failed$statusLabel: ${data['message']}';
         } else if (e.message != null && e.message!.isNotEmpty) {
-          message = 'Failed (' + (status?.toString() ?? '') + '): ' + e.message!;
+          message = 'Failed$statusLabel: ${e.message!}';
         } else if (status != null) {
-          message = 'Failed (' + status.toString() + ')';
+          message = 'Failed ($status)';
         }
         // ignore: avoid_print
-        print('scanAttendance dio error: status=' + (e.response?.statusCode?.toString() ?? '-') + ' data=' + (e.response?.data?.toString() ?? '-') );
+        print('scanAttendance dio error: status=${e.response?.statusCode?.toString() ?? '-'} data=${e.response?.data?.toString() ?? '-'}');
       } else {
         // ignore: avoid_print
-        print('scanAttendance unexpected error: ' + e.toString());
+        print('scanAttendance unexpected error: $e');
       }
-      setState(() => _status = message);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
+      if (mounted) {
+        setState(() => _status = message);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
+
   @override
   void dispose() {
     _controller.dispose();
@@ -159,15 +166,3 @@ class _ScanScreenState extends State<ScanScreen> {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
