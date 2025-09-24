@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+﻿import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
@@ -182,34 +182,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      if (_deviceId == null) ...[
-                        const Text(
-                          'Preparing device ID...',
-                          style: TextStyle(fontSize: 12, color: Colors.black45),
-                        ),
-                      ] else ...[
-                        SelectableText(
-                        "Device ID: ${_deviceId!}",
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 12, color: Colors.black87),
-                      ),
-                        TextButton.icon(
-                          onPressed: () {
-                            final id = _deviceId!;
-                            Clipboard.setData(ClipboardData(text: id));
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Device ID copied')),
-                            );
-                          },
-                          icon: const Icon(Icons.copy, size: 16),
-                          label: const Text('Copy Device ID'),
-                        ),
-                        const Text(
-                          'Share this ID with the admin so your device can be registered.',
-                            textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 12, color: Colors.black54),
-                        ),
-                      ],
                     ],
                   ),
                 ),
@@ -221,4 +193,5 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
+
 
