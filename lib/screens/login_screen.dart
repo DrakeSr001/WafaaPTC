@@ -1,10 +1,12 @@
-﻿import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
 import '../services/api_client.dart';
 import '../config.dart';
 import '../services/pending_scan.dart';
 import '../services/token_storage.dart';
+import '../services/device_id.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -40,10 +42,17 @@ class _LoginScreenState extends State<LoginScreen> {
   final _password = TextEditingController(text: ''); // for dev
   bool _busy = false;
   String? _err;
+  String? _deviceId;
 
   @override
   void initState() {
     super.initState();
+    () async {
+      final id = await ensureDeviceId();
+      if (mounted) {
+        setState(() => _deviceId = id);
+      }
+    }();
     () async {
       final t = await TokenStorage.read();
       final role = await TokenStorage.readRole();
@@ -63,10 +72,12 @@ class _LoginScreenState extends State<LoginScreen> {
       _err = null;
     });
     final api = ApiClient();
+    final deviceId = _deviceId ?? await ensureDeviceId();
     try {
       final user = await api.loginAndGetUser(
         _email.text.trim(),
         _password.text.trim(),
+        deviceId,
       );
       if (!mounted) return;
       final role = (user['role'] as String? ?? 'doctor').toLowerCase();
@@ -170,6 +181,35 @@ class _LoginScreenState extends State<LoginScreen> {
                               : const Text('Login'),
                         ),
                       ),
+                      const SizedBox(height: 12),
+                      if (_deviceId == null) ...[
+                        const Text(
+                          'Preparing device ID...',
+                          style: TextStyle(fontSize: 12, color: Colors.black45),
+                        ),
+                      ] else ...[
+                        SelectableText(
+                        "Device ID: ${_deviceId!}",
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 12, color: Colors.black87),
+                      ),
+                        TextButton.icon(
+                          onPressed: () {
+                            final id = _deviceId!;
+                            Clipboard.setData(ClipboardData(text: id));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Device ID copied')),
+                            );
+                          },
+                          icon: const Icon(Icons.copy, size: 16),
+                          label: const Text('Copy Device ID'),
+                        ),
+                        const Text(
+                          'Share this ID with the admin so your device can be registered.',
+                            textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 12, color: Colors.black54),
+                        ),
+                      ],
                     ],
                   ),
                 ),

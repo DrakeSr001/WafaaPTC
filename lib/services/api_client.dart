@@ -43,16 +43,16 @@ class ApiClient {
     return r.data as String;
   }
 
-  Future<String> login(String email, String password) async {
+  Future<String> login(String email, String password, String deviceId) async {
     final r = await dio
-        .post('/auth/login', data: {'email': email, 'password': password});
+        .post('/auth/login', data: {'email': email, 'password': password, 'deviceId': deviceId});
     final token = r.data['accessToken'] as String;
     await TokenStorage.save(token);
     return token;
   }
 
-  Future<Map<String, dynamic>> loginAndGetUser(String email, String password) async {
-    final r = await dio.post('/auth/login', data: {'email': email, 'password': password});
+  Future<Map<String, dynamic>> loginAndGetUser(String email, String password, String deviceId) async {
+    final r = await dio.post('/auth/login', data: {'email': email, 'password': password, 'deviceId': deviceId});
     final token = r.data['accessToken'] as String;
     final user = Map<String, dynamic>.from(r.data['user'] as Map);
     await TokenStorage.save(token);
