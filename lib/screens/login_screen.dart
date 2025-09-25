@@ -1,4 +1,4 @@
-﻿import 'dart:ui';
+import 'dart:ui';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -26,12 +26,6 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _showPassword = false;
   String? _err;
   String? _deviceId;
-
-  final _highlights = const [
-    'Secure single-device access',
-    'Instant kiosk QR logging',
-    'Enterprise-grade protection',
-  ];
 
   @override
   void initState() {
@@ -145,7 +139,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _showDeviceHelp() {
-    final id = _deviceId ?? 'generating…';
+    final id = _deviceId ?? 'Generating a secure identifier...';
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -190,13 +184,19 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildHeader(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isLight = theme.brightness == Brightness.light;
+    final accent = isLight ? scheme.primary : Colors.white;
+    final subtitleColor = accent.withOpacity(isLight ? 0.7 : 0.75);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.18),
+            color: accent.withOpacity(isLight ? 0.12 : 0.2),
             borderRadius: BorderRadius.circular(24),
           ),
           child: Image.asset(
@@ -213,57 +213,56 @@ class _LoginScreenState extends State<LoginScreen> {
           style: GoogleFonts.cairo(
             fontSize: 24,
             fontWeight: FontWeight.w800,
-            color: Colors.white,
+            color: accent,
           ),
         ),
         const SizedBox(height: 8),
         Text(
-          'مرحباً بكم',
+          '?????? ???',
           textAlign: TextAlign.center,
           textDirection: TextDirection.rtl,
           style: GoogleFonts.cairo(
             fontSize: 18,
             fontWeight: FontWeight.w500,
-            color: Colors.white70,
+            color: subtitleColor,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildHighlights(BuildContext context) {
-    return Wrap(
-      alignment: WrapAlignment.center,
-      spacing: 12,
-      runSpacing: 12,
-      children: _highlights
-          .map(
-            (label) => Chip(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              backgroundColor: const Color.fromARGB(255, 19, 48, 85).withValues(alpha: 0.18),
-              avatar:
-                  const Icon(Icons.check_circle, color: Color.fromARGB(255, 1, 230, 191), size: 18),
-              label: Text(
-                label,
-                style: const TextStyle(color: Color.fromARGB(255, 0, 0, 0)),
-              ),
-            ),
-          )
-          .toList(),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isLight = theme.brightness == Brightness.light;
+    final backgroundGradientColors = isLight
+        ? [
+            Color.alphaBlend(
+              scheme.primary.withOpacity(0.04),
+              theme.scaffoldBackgroundColor,
+            ),
+            theme.scaffoldBackgroundColor,
+          ]
+        : [
+            Color.alphaBlend(
+              scheme.primary.withOpacity(0.18),
+              theme.scaffoldBackgroundColor,
+            ),
+            Color.alphaBlend(
+              Colors.black.withOpacity(0.55),
+              theme.scaffoldBackgroundColor,
+            ),
+            theme.scaffoldBackgroundColor,
+          ];
     return Scaffold(
       extendBodyBehindAppBar: true,
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF0F2027), Color(0xFF203A43), Color(0xFF2C5364)],
+            colors: backgroundGradientColors,
           ),
         ),
         child: SafeArea(
@@ -420,7 +419,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                     const SizedBox(height: 6),
                                     SelectableText(
                                       _deviceId ??
-                                          'Generating a secure identifier�',
+                                          'Generating a secure identifier...',
+
                                       style: GoogleFonts.robotoMono(
                                           fontSize: 14,
                                           color: theme
@@ -451,8 +451,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             ],
                           ),
                         ),
-                        const SizedBox(height: 28),
-                        _buildHighlights(context),
                       ],
                     ),
                   ),
@@ -474,6 +472,35 @@ class _GlassCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isLight = theme.brightness == Brightness.light;
+    final surface = scheme.surface;
+    final overlayColor = isLight
+        ? Colors.white.withOpacity(0.92)
+        : Color.alphaBlend(
+            scheme.primary.withOpacity(0.1),
+            surface,
+          ).withOpacity(0.96);
+    final borderColor = isLight
+        ? Colors.white.withOpacity(0.35)
+        : scheme.primary.withOpacity(0.25);
+    final shadows = isLight
+        ? const [
+            BoxShadow(
+              color: Colors.black12,
+              offset: Offset(0, 12),
+              blurRadius: 24,
+            ),
+          ]
+        : [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.45),
+              offset: const Offset(0, 18),
+              blurRadius: 40,
+            ),
+          ];
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(28),
       child: BackdropFilter(
@@ -483,12 +510,9 @@ class _GlassCard extends StatelessWidget {
           padding: padding,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(28),
-            color: Colors.white.withValues(alpha: 0.88),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
-            boxShadow: const [
-              BoxShadow(
-                  color: Colors.black12, offset: Offset(0, 12), blurRadius: 24),
-            ],
+            color: overlayColor,
+            border: Border.all(color: borderColor),
+            boxShadow: shadows,
           ),
           child: child,
         ),
@@ -496,5 +520,3 @@ class _GlassCard extends StatelessWidget {
     );
   }
 }
-
-

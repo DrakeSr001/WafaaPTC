@@ -1,4 +1,4 @@
-import 'package:dio/dio.dart';
+﻿import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
@@ -76,14 +76,16 @@ class _ScanScreenState extends State<ScanScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('Invalid QR. Please scan the kiosk code.')),
+            content: Text('Invalid QR. Please scan the kiosk code.'),
+          ),
         );
       }
       return;
     }
+
     setState(() {
       _busy = true;
-      _status = 'Sending to server�';
+      _status = 'Sending to server...';
     });
 
     try {
@@ -104,8 +106,7 @@ class _ScanScreenState extends State<ScanScreen> {
         final data = e.response?.data;
         final status = e.response?.statusCode;
         final statusLabel = status != null ? ' ($status)' : '';
-        if (data is Map &&
-            data['message'] is String &&
+        if (data is Map && data['message'] is String &&
             (data['message'] as String).isNotEmpty) {
           message = 'Failed$statusLabel: ${data['message']}';
         } else if (e.message != null && e.message!.isNotEmpty) {
@@ -134,6 +135,27 @@ class _ScanScreenState extends State<ScanScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final media = MediaQuery.of(context);
+    final bottomInset = media.viewPadding.bottom > 0
+        ? media.viewPadding.bottom
+        : media.padding.bottom;
+    final bottomSafePadding = bottomInset + 32;
+    final width = media.size.width;
+    final instructionScale = width < 360
+        ? 0.9
+        : width > 720
+            ? 1.1
+            : 1.0;
+    final instructionsStyle = theme.textTheme.bodyMedium?.copyWith(
+      color: Colors.white70,
+      fontSize: (theme.textTheme.bodyMedium?.fontSize ?? 14) * instructionScale,
+      height: 1.35,
+    );
+    final statusStyle = theme.textTheme.titleSmall?.copyWith(
+      color: Colors.white,
+      fontSize: (theme.textTheme.titleSmall?.fontSize ?? 16) * instructionScale,
+    );
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Scan Attendance QR'),
@@ -159,14 +181,14 @@ class _ScanScreenState extends State<ScanScreen> {
             alignment: Alignment.bottomCenter,
             child: Container(
               width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+              padding: EdgeInsets.fromLTRB(16, 16, 16, bottomSafePadding),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
                     Colors.black.withValues(alpha: 0.0),
-                    Colors.black.withValues(alpha: 0.72)
+                    Colors.black.withValues(alpha: 0.72),
                   ],
                 ),
               ),
@@ -174,10 +196,9 @@ class _ScanScreenState extends State<ScanScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Align the kiosk QR within the frame. We�ll submit it automatically.',
+                    "Align the kiosk QR within the frame. We'll submit it automatically.",
                     textAlign: TextAlign.center,
-                    style: theme.textTheme.bodyMedium
-                        ?.copyWith(color: Colors.white70),
+                    style: instructionsStyle,
                   ),
                   const SizedBox(height: 12),
                   if (_status != null)
@@ -187,14 +208,15 @@ class _ScanScreenState extends State<ScanScreen> {
                         _status!,
                         key: ValueKey(_status),
                         textAlign: TextAlign.center,
-                        style: theme.textTheme.titleSmall
-                            ?.copyWith(color: Colors.white),
+                        style: statusStyle,
                       ),
                     ),
                   if (_busy) ...[
                     const SizedBox(height: 12),
                     const CircularProgressIndicator(
-                        color: Colors.white, strokeWidth: 2.5),
+                      color: Colors.white,
+                      strokeWidth: 2.5,
+                    ),
                   ],
                 ],
               ),
@@ -205,3 +227,5 @@ class _ScanScreenState extends State<ScanScreen> {
     );
   }
 }
+
+

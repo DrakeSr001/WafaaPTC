@@ -127,22 +127,30 @@ class _MonthHistoryScreenState extends State<MonthHistoryScreen> {
                   ),
                 )
               : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
+                          horizontal: 20, vertical: 12),
                       alignment: Alignment.centerLeft,
                       child: Text(
                         'Total this month: $_totalHours',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
                       ),
                     ),
-                    const Divider(height: 1),
+                    const SizedBox(height: 4),
                     Expanded(
                       child: ListView.separated(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
                         itemCount: _days.length,
-                        separatorBuilder: (_, __) => const Divider(height: 1),
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
                         itemBuilder: (_, i) {
+                          final theme = Theme.of(context);
+                          final scheme = theme.colorScheme;
+                          final isLight = theme.brightness == Brightness.light;
                           final row = _days[i] as Map<String, dynamic>;
                           final iso = row['date'] as String?;
                           final inStr = (row['in'] as String?) ?? '-';
@@ -157,10 +165,38 @@ class _MonthHistoryScreenState extends State<MonthHistoryScreen> {
                               ? (iso ?? '')
                               : DateFormat('MM/dd/yy').format(d);
 
-                          return ListTile(
-                            title: Text(
-                                '$dateStr  -  IN: $inStr  -  OUT: $outStr'),
-                            subtitle: Text('Hours: $hrs'),
+                          return Card(
+                            elevation: isLight ? 2 : 0,
+                            margin: EdgeInsets.zero,
+                            color: theme.cardColor,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(18),
+                              side: BorderSide(
+                                color: scheme.outline.withOpacity(
+                                    isLight ? 0.08 : 0.3),
+                              ),
+                            ),
+                            child: ListTile(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(18),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 14,
+                              ),
+                              title: Text(
+                                '$dateStr  -  IN: $inStr  -  OUT: $outStr',
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              subtitle: Text(
+                                'Hours: $hrs',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: scheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
                           );
                         },
                       ),

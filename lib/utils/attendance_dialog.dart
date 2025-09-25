@@ -17,7 +17,7 @@ Future<void> showAttendanceDialog(
     parsed = DateTime.tryParse(happenedAtIso)?.toLocal();
   }
   final formattedTime = parsed != null
-      ? DateFormat('EEE, MMM d � h:mm a').format(parsed)
+      ? '${DateFormat('EEE, MMM d').format(parsed)} at ${DateFormat('h:mm a').format(parsed)}'
       : 'Just now';
 
   final summaryLines = [

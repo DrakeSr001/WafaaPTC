@@ -95,6 +95,14 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isLight = theme.brightness == Brightness.light;
+    final backgroundGradientColors = isLight
+        ? const [Color(0xFFE9F1FF), Color(0xFFF9FBFF)]
+        : [
+            Color.alphaBlend(scheme.primary.withOpacity(0.16), scheme.background),
+            theme.scaffoldBackgroundColor,
+          ];
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -121,11 +129,11 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFFE9F1FF), Color(0xFFF7FBFF)],
+            colors: backgroundGradientColors,
           ),
         ),
         child: SafeArea(
@@ -147,7 +155,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   _QuickActionCard(
                     icon: Icons.qr_code_scanner,
                     title: 'Scan & Record',
-                    subtitle: 'Capture IN or OUT at a kiosk in seconds.',
+                    subtitle: 'Scan QR code to Log IN or OUT.',
                     color: theme.colorScheme.primary,
                     onTap: () => Navigator.pushNamed(context, '/scan'),
                   ),
@@ -179,26 +187,39 @@ class _HomeScreenState extends State<HomeScreen> {
               Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: theme.cardColor,
                   borderRadius: BorderRadius.circular(20),
-                  boxShadow: const [
-                    BoxShadow(
-                        color: Colors.black12,
-                        blurRadius: 24,
-                        offset: Offset(0, 12)),
-                  ],
+                  border: Border.all(
+                    color: scheme.outline.withOpacity(isLight ? 0.08 : 0.24),
+                  ),
+                  boxShadow: isLight
+                      ? const [
+                          BoxShadow(
+                            color: Colors.black12,
+                            blurRadius: 24,
+                            offset: Offset(0, 12),
+                          ),
+                        ]
+                      : [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.5),
+                            blurRadius: 28,
+                            offset: const Offset(0, 14),
+                          ),
+                        ],
                 ),
                 child: Row(
                   children: [
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color:
-                            theme.colorScheme.primary.withValues(alpha: 0.12),
+                        color: scheme.primaryContainer,
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(Icons.tips_and_updates,
-                          color: theme.colorScheme.primary),
+                      child: Icon(
+                        Icons.tips_and_updates,
+                        color: scheme.onPrimaryContainer,
+                      ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -225,39 +246,66 @@ class _HeroBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isLight = theme.brightness == Brightness.light;
+
+    final gradientColors = isLight
+        ? [scheme.primary, scheme.primaryContainer]
+        : [
+            Color.alphaBlend(
+              scheme.primary.withOpacity(0.2),
+              scheme.surface,
+            ),
+            Color.alphaBlend(
+              scheme.primaryContainer.withOpacity(0.12),
+              scheme.background,
+            ),
+          ];
+
+    final idPrefix = deviceId == null
+        ? null
+        : deviceId!.substring(0, deviceId!.length >= 8 ? 8 : deviceId!.length);
+    final deviceSnippet = idPrefix == null
+        ? 'Preparing your verified device ID...'
+        : 'Device linked - $idPrefix...';
+
+    final textColor = scheme.onPrimary;
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF1D6AA1), Color(0xFF0F4C75)],
+          colors: gradientColors,
         ),
         borderRadius: BorderRadius.circular(28),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-              color: Colors.black26, blurRadius: 24, offset: Offset(0, 18)),
+            color: isLight ? Colors.black26 : Colors.black.withOpacity(0.45),
+            blurRadius: 24,
+            offset: const Offset(0, 18),
+          ),
         ],
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final isWide = constraints.maxWidth > 420;
-          final deviceSnippet = deviceId == null
-              ? 'Preparing your verified device ID…'
-              : 'Device linked • ${deviceId!.substring(0, deviceId!.length >= 8 ? 8 : deviceId!.length)}…';
+
           final heroText = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Today is ${DateFormat('EEEE, MMM d').format(DateTime.now())}',
-                style:
-                    theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
+                'Today is ' + DateFormat('EEEE, MMM d').format(DateTime.now()),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: textColor.withOpacity(0.85),
+                ),
               ),
               const SizedBox(height: 8),
               Text(
                 'Log your attendance with confidence.',
                 style: theme.textTheme.headlineSmall?.copyWith(
-                  color: Colors.white,
+                  color: textColor,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -265,14 +313,15 @@ class _HeroBanner extends StatelessWidget {
               Text(
                 deviceSnippet,
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.85),
+                  color: textColor.withOpacity(0.9),
                 ),
               ),
             ],
           );
+
           final logoCard = Container(
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.18),
+              color: textColor.withOpacity(isLight ? 0.18 : 0.12),
               borderRadius: BorderRadius.circular(24),
             ),
             padding: EdgeInsets.all(isWide ? 18 : 12),
@@ -326,15 +375,23 @@ class _QuickActionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isLight = theme.brightness == Brightness.light;
+    final surface = scheme.surface;
+    final shadowColor =
+        isLight ? color.withOpacity(0.28) : Colors.black.withOpacity(0.6);
+    final highlight = color.withOpacity(isLight ? 0.16 : 0.22);
+    final cardElevation = isLight ? 6.0 : 2.0;
     final isWide = MediaQuery.of(context).size.width > 720;
+
     return SizedBox(
       width: isWide ? 300 : double.infinity,
       child: Material(
-        color: Colors.white,
+        color: surface,
         borderRadius: BorderRadius.circular(24),
         clipBehavior: Clip.antiAlias,
-        elevation: 6,
-        shadowColor: color.withValues(alpha: 0.3),
+        elevation: cardElevation,
+        shadowColor: shadowColor,
         child: InkWell(
           onTap: onTap,
           child: Padding(
@@ -345,7 +402,7 @@ class _QuickActionCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.14),
+                    color: highlight,
                     shape: BoxShape.circle,
                   ),
                   child: Icon(icon, color: color, size: 28),
@@ -353,14 +410,17 @@ class _QuickActionCard extends StatelessWidget {
                 const SizedBox(height: 18),
                 Text(
                   title,
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w700),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onSurface,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   subtitle,
-                  style: theme.textTheme.bodyMedium
-                      ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -376,21 +436,42 @@ class _DeviceIdPanel extends StatelessWidget {
   final bool loading;
   final Future<void> Function() onCopy;
 
-  const _DeviceIdPanel(
-      {required this.deviceId, required this.loading, required this.onCopy});
+  const _DeviceIdPanel({
+    required this.deviceId,
+    required this.loading,
+    required this.onCopy,
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isLight = theme.brightness == Brightness.light;
+    final surface = theme.cardColor;
+    final borderColor = scheme.outline.withOpacity(isLight ? 0.08 : 0.24);
+    final shadow = isLight
+        ? const [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 24,
+              offset: Offset(0, 12),
+            ),
+          ]
+        : [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.5),
+              blurRadius: 28,
+              offset: const Offset(0, 14),
+            ),
+          ];
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: surface,
         borderRadius: BorderRadius.circular(22),
-        boxShadow: const [
-          BoxShadow(
-              color: Colors.black12, blurRadius: 24, offset: Offset(0, 12)),
-        ],
+        border: Border.all(color: borderColor),
+        boxShadow: shadow,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -399,10 +480,12 @@ class _DeviceIdPanel extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: theme.colorScheme.secondary.withValues(alpha: 0.12),
+              color: scheme.secondaryContainer,
             ),
-            child: Icon(Icons.verified_rounded,
-                color: theme.colorScheme.secondary),
+            child: Icon(
+              Icons.verified_rounded,
+              color: scheme.onSecondaryContainer,
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -411,25 +494,30 @@ class _DeviceIdPanel extends StatelessWidget {
               children: [
                 Text(
                   'Your trusted device',
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w700),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 if (loading)
                   Row(
                     children: const [
                       SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2)),
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
                       SizedBox(width: 12),
-                      Text('Generating secure identifier�'),
+                      Text('Generating a secure identifier...'),
                     ],
                   )
                 else
                   SelectableText(
                     deviceId ?? '-',
-                    style: GoogleFonts.robotoMono(fontSize: 14),
+                    style: GoogleFonts.robotoMono(
+                      fontSize: 14,
+                      color: scheme.onSurface,
+                    ),
                   ),
                 const SizedBox(height: 8),
                 Text(
@@ -451,11 +539,13 @@ class _DeviceIdPanel extends StatelessWidget {
                         builder: (_) => AlertDialog(
                           title: const Text('Need to change phones?'),
                           content: const Text(
-                              'Ask an admin to release this ID. They can then approve your new device instantly.'),
+                            'Ask an admin to release this ID. They can then approve your new device instantly.',
+                          ),
                           actions: [
                             TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                child: const Text('Close')),
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('Close'),
+                            ),
                           ],
                         ),
                       ),
@@ -471,3 +561,4 @@ class _DeviceIdPanel extends StatelessWidget {
     );
   }
 }
+
