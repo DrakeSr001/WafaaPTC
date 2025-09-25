@@ -249,18 +249,21 @@ class _HeroBanner extends StatelessWidget {
     final scheme = theme.colorScheme;
     final isLight = theme.brightness == Brightness.light;
 
+    // Keep your gradients
     final gradientColors = isLight
         ? [scheme.primary, scheme.primaryContainer]
         : [
-            Color.alphaBlend(
-              scheme.primary.withOpacity(0.2),
-              scheme.surface,
-            ),
-            Color.alphaBlend(
-              scheme.primaryContainer.withOpacity(0.12),
-              scheme.background,
-            ),
+            Color.alphaBlend(scheme.primary.withOpacity(0.20), scheme.surface),
+            Color.alphaBlend(scheme.primaryContainer.withOpacity(0.12), scheme.background),
           ];
+
+    // ✅ Choose text color based on the banner's perceived brightness
+    // (in dark mode, use onSurface; in light mode, keep onPrimary for strong contrast)
+    final bannerBgProbe = gradientColors.last;
+    final bgBrightness = ThemeData.estimateBrightnessForColor(bannerBgProbe);
+    final Color textColor = (bgBrightness == Brightness.dark)
+        ? scheme.onSurface  // light text for dark bg (Material sets this to near-white in dark theme)
+        : scheme.onPrimary; // dark text for light primary bg
 
     final idPrefix = deviceId == null
         ? null
@@ -268,8 +271,6 @@ class _HeroBanner extends StatelessWidget {
     final deviceSnippet = idPrefix == null
         ? 'Preparing your verified device ID...'
         : 'Device linked - $idPrefix...';
-
-    final textColor = scheme.onPrimary;
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -313,7 +314,7 @@ class _HeroBanner extends StatelessWidget {
               Text(
                 deviceSnippet,
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: textColor.withOpacity(0.9),
+                  color: textColor.withOpacity(0.90),
                 ),
               ),
             ],
@@ -321,7 +322,8 @@ class _HeroBanner extends StatelessWidget {
 
           final logoCard = Container(
             decoration: BoxDecoration(
-              color: textColor.withOpacity(isLight ? 0.18 : 0.12),
+              // Slight translucent overlay that adapts to textColor choice
+              color: textColor.withOpacity(isLight ? 0.18 : 0.20),
               borderRadius: BorderRadius.circular(24),
             ),
             padding: EdgeInsets.all(isWide ? 18 : 12),
@@ -356,6 +358,7 @@ class _HeroBanner extends StatelessWidget {
     );
   }
 }
+
 
 class _QuickActionCard extends StatelessWidget {
   final IconData icon;

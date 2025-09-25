@@ -218,7 +218,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         const SizedBox(height: 8),
         Text(
-          '?????? ???',
+          welcome,
           textAlign: TextAlign.center,
           textDirection: TextDirection.rtl,
           style: GoogleFonts.cairo(
