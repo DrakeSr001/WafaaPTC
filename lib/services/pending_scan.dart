@@ -23,4 +23,3 @@ class PendingScan {
     return c.trim().length >= 10 ? c.trim() : null;
   }
 }
-

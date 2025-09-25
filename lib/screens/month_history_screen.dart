@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../services/api_client.dart';
@@ -38,7 +38,8 @@ class _MonthHistoryScreenState extends State<MonthHistoryScreen> {
           await _api.myMonth(year: _selected.year, month: _selected.month);
       setState(() {
         _days = List<dynamic>.from(res['days'] as List);
-        _totalHours = (res['totalHours'] as String?) ?? '00:00'; // <-- Store totalHours
+        _totalHours =
+            (res['totalHours'] as String?) ?? '00:00'; // <-- Store totalHours
       });
     } catch (e) {
       setState(() => _error = 'Failed to load month.');
@@ -128,7 +129,8 @@ class _MonthHistoryScreenState extends State<MonthHistoryScreen> {
               : Column(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
                       alignment: Alignment.centerLeft,
                       child: Text(
                         'Total this month: $_totalHours',
@@ -156,7 +158,8 @@ class _MonthHistoryScreenState extends State<MonthHistoryScreen> {
                               : DateFormat('MM/dd/yy').format(d);
 
                           return ListTile(
-                            title: Text('$dateStr  -  IN: $inStr  -  OUT: $outStr'),
+                            title: Text(
+                                '$dateStr  -  IN: $inStr  -  OUT: $outStr'),
                             subtitle: Text('Hours: $hrs'),
                           );
                         },
@@ -167,11 +170,3 @@ class _MonthHistoryScreenState extends State<MonthHistoryScreen> {
     );
   }
 }
-
-
-
-
-
-
-
-

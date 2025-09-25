@@ -44,15 +44,17 @@ class ApiClient {
   }
 
   Future<String> login(String email, String password, String deviceId) async {
-    final r = await dio
-        .post('/auth/login', data: {'email': email, 'password': password, 'deviceId': deviceId});
+    final r = await dio.post('/auth/login',
+        data: {'email': email, 'password': password, 'deviceId': deviceId});
     final token = r.data['accessToken'] as String;
     await TokenStorage.save(token);
     return token;
   }
 
-  Future<Map<String, dynamic>> loginAndGetUser(String email, String password, String deviceId) async {
-    final r = await dio.post('/auth/login', data: {'email': email, 'password': password, 'deviceId': deviceId});
+  Future<Map<String, dynamic>> loginAndGetUser(
+      String email, String password, String deviceId) async {
+    final r = await dio.post('/auth/login',
+        data: {'email': email, 'password': password, 'deviceId': deviceId});
     final token = r.data['accessToken'] as String;
     final user = Map<String, dynamic>.from(r.data['user'] as Map);
     await TokenStorage.save(token);
@@ -66,12 +68,14 @@ class ApiClient {
   }
 
   Future<List<Map<String, dynamic>>> listDoctors() async {
-    final r = await dio.get('/admin/users', queryParameters: {'role': 'doctor'});
+    final r =
+        await dio.get('/admin/users', queryParameters: {'role': 'doctor'});
     final list = (r.data as List).cast<dynamic>();
     return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }
 
-  Future<String> doctorMonthCsv({required String userId, required int year, required int month}) async {
+  Future<String> doctorMonthCsv(
+      {required String userId, required int year, required int month}) async {
     final r = await dio.get(
       '/reports/doctor-month.csv',
       queryParameters: {'userId': userId, 'year': year, 'month': month},
@@ -92,11 +96,14 @@ class ApiClient {
   // Lists
   Future<List<Map<String, dynamic>>> listDevices() async {
     final r = await dio.get('/admin/devices');
-    return (r.data as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    return (r.data as List)
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
   }
 
   // Users
-  Future<void> updateUser(String id, {String? fullName, String? role, bool? isActive}) async {
+  Future<void> updateUser(String id,
+      {String? fullName, String? role, bool? isActive}) async {
     await dio.patch('/admin/users/$id', data: {
       if (fullName != null) 'fullName': fullName,
       if (role != null) 'role': role,
@@ -105,7 +112,8 @@ class ApiClient {
   }
 
   Future<void> resetUserPassword(String id, String newPassword) async {
-    await dio.patch('/admin/users/$id/password', data: {'password': newPassword});
+    await dio
+        .patch('/admin/users/$id/password', data: {'password': newPassword});
   }
 
   Future<void> setUserDevice(String id, String deviceId) async {
@@ -121,7 +129,8 @@ class ApiClient {
   }
 
   // Devices
-  Future<void> updateDevice(String id, {String? name, String? location, bool? isActive}) async {
+  Future<void> updateDevice(String id,
+      {String? name, String? location, bool? isActive}) async {
     await dio.patch('/admin/devices/$id', data: {
       if (name != null) 'name': name,
       if (location != null) 'location': location,
