@@ -67,25 +67,33 @@ class _LoginScreenState extends State<LoginScreen> {
     if (error is DioException) {
       final data = error.response?.data;
       final status = error.response?.statusCode;
-      if (data is Map && data['message'] is String) {
-        final raw = (data['message'] as String).trim();
-        switch (raw) {
+      final rawMessage = data is Map && data['message'] is String
+          ? (data['message'] as String).trim()
+          : null;
+
+      if (rawMessage != null && rawMessage.isNotEmpty) {
+        final normalized = rawMessage.toLowerCase();
+        switch (normalized) {
           case 'invalid_credentials':
-          case 'Invalid credentials':
-            return 'Email or password is incorrect.';
+          case 'invalid credentials':
+            return 'Your email and password did not match an active account. If you recently changed devices or were deactivated, ask the administrator to reset or reactivate your login.';
           case 'device_not_registered':
-            return 'Access denied. Contact the admin to allow this device.';
+            return 'This account is already paired with another device. Share the Device ID shown below with the administrator so they can release the previous device before you sign in here.';
           case 'device_required':
-            return 'Device verification failed. Please try again.';
-          default:
-            return raw.isNotEmpty
-                ? raw
-                : 'Login failed (${status ?? 'error'}).';
+            return 'We need to confirm this device before you can sign in. Wait for the Device ID to finish generating and try again.';
         }
+        return rawMessage;
       }
+
+      if (error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.receiveTimeout) {
+        return 'The server took too long to respond. Check your connection and try again.';
+      }
+
       if (error.message != null && error.message!.isNotEmpty) {
         return error.message!;
       }
+
       if (status != null) {
         return 'Login failed ($status).';
       }
@@ -488,3 +496,5 @@ class _GlassCard extends StatelessWidget {
     );
   }
 }
+
+
