@@ -24,6 +24,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _busy = false;
   bool _showPassword = false;
+  bool _rememberMe = false;
   String? _err;
   String? _deviceId;
 
@@ -35,8 +36,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _primeData() async {
     final id = await ensureDeviceId();
+    final refresh = await TokenStorage.readRefreshToken();
     if (mounted) {
-      setState(() => _deviceId = id);
+      setState(() {
+        _deviceId = id;
+        _rememberMe = refresh != null && refresh.isNotEmpty;
+      });
     }
 
     final token = await TokenStorage.read();
@@ -113,6 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
         _email.text.trim(),
         _password.text.trim(),
         deviceId,
+        rememberMe: _rememberMe,
       );
       if (!mounted) return;
       final role = (user['role'] as String? ?? 'doctor').toLowerCase();
@@ -368,6 +374,16 @@ class _LoginScreenState extends State<LoginScreen> {
                                         ),
                                 ),
                                 const SizedBox(height: 24),
+                                _RememberMeToggle(
+                                  value: _rememberMe,
+                                  enabled: !_busy,
+                                  onChanged: _busy
+                                      ? null
+                                      : (value) {
+                                          setState(() => _rememberMe = value);
+                                        },
+                                ),
+                                const SizedBox(height: 24),
                                 SizedBox(
                                   width: double.infinity,
                                   child: FilledButton(
@@ -464,6 +480,159 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
+class _RememberMeToggle extends StatelessWidget {
+  final bool value;
+  final bool enabled;
+  final ValueChanged<bool>? onChanged;
+
+  const _RememberMeToggle({
+    required this.value,
+    required this.enabled,
+    this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isOn = value;
+
+    final gradient = isOn
+        ? LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              scheme.primary.withOpacity(0.92),
+              scheme.primaryContainer.withOpacity(0.88),
+            ],
+          )
+        : null;
+
+    final fallbackSurface = scheme.surfaceVariant.withOpacity(
+      theme.brightness == Brightness.dark ? 0.55 : 0.35,
+    );
+
+    final borderColor = isOn
+        ? scheme.primary.withOpacity(0.55)
+        : scheme.outlineVariant.withOpacity(0.7);
+
+    final titleColor = isOn
+        ? scheme.onPrimary
+        : theme.textTheme.titleSmall?.color ?? scheme.onSurface;
+
+    final subtitleColor = isOn
+        ? scheme.onPrimary.withOpacity(0.85)
+        : (theme.textTheme.bodySmall?.color ?? scheme.onSurfaceVariant)
+            .withOpacity(0.85);
+
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 180),
+      opacity: enabled ? 1 : 0.6,
+      child: InkWell(
+        onTap: enabled && onChanged != null ? () => onChanged!(!value) : null,
+        borderRadius: BorderRadius.circular(22),
+        splashColor: scheme.primary.withOpacity(0.14),
+        highlightColor: scheme.primary.withOpacity(0.06),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            gradient: gradient,
+            color: isOn ? null : fallbackSurface,
+            border: Border.all(color: borderColor, width: 1.4),
+            boxShadow: isOn
+                ? [
+                    BoxShadow(
+                      color: scheme.primary.withOpacity(0.32),
+                      blurRadius: 26,
+                      offset: const Offset(0, 14),
+                    ),
+                  ]
+                : [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(
+                        theme.brightness == Brightness.dark ? 0.42 : 0.1,
+                      ),
+                      blurRadius: 20,
+                      offset: const Offset(0, 12),
+                    ),
+                  ],
+          ),
+          child: Row(
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(19),
+                  color: isOn ? scheme.onPrimary : scheme.surface,
+                  border: Border.all(
+                    color: isOn ? scheme.onPrimary : scheme.outline.withOpacity(0.55),
+                    width: 2,
+                  ),
+                ),
+                child: Icon(
+                  isOn ? Icons.check_rounded : Icons.today_outlined,
+                  size: 20,
+                  color: isOn ? scheme.primary : scheme.outline,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Remember me',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: titleColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      isOn
+                          ? 'Stay signed in until you choose to log out.'
+                          : 'Sign me out after today. Tick to stay signed in.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: subtitleColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                width: 44,
+                height: 22,
+                padding: const EdgeInsets.all(3),
+                alignment: isOn ? Alignment.centerRight : Alignment.centerLeft,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(13),
+                  color: isOn
+                      ? scheme.onPrimary.withOpacity(0.9)
+                      : scheme.surfaceVariant.withOpacity(0.5),
+                ),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 220),
+                  width: 16,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isOn ? scheme.primary : scheme.outline,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 class _GlassCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
@@ -520,3 +689,11 @@ class _GlassCard extends StatelessWidget {
     );
   }
 }
+
+
+
+
+
+
+
+

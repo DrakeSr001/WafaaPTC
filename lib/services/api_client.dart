@@ -1,31 +1,167 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
+
 import '../config.dart';
+import 'device_id.dart';
 import 'token_storage.dart';
 
 class ApiClient {
   final Dio dio;
+  Completer<void>? _refreshing;
 
   ApiClient()
-      : dio = Dio(BaseOptions(
-          baseUrl: backendBaseUrl,
-          connectTimeout: const Duration(seconds: 8),
-          receiveTimeout: const Duration(seconds: 8),
-        )) {
-    dio.interceptors.add(InterceptorsWrapper(
-      onRequest: (options, handler) async {
-        final token = await TokenStorage.read();
-        if (token != null) {
-          options.headers['Authorization'] = 'Bearer $token';
-        }
-        options.headers['Content-Type'] = 'application/json';
-        handler.next(options);
-      },
-    ));
+      : dio = Dio(
+          BaseOptions(
+            baseUrl: backendBaseUrl,
+            connectTimeout: const Duration(seconds: 8),
+            receiveTimeout: const Duration(seconds: 8),
+          ),
+        ) {
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          final token = await TokenStorage.read();
+          if (token != null) {
+            options.headers['Authorization'] = 'Bearer $token';
+          }
+          options.headers['Content-Type'] = 'application/json';
+          handler.next(options);
+        },
+        onError: (error, handler) async {
+          final retryResponse = await _tryRefreshAndRetry(error);
+          if (retryResponse != null) {
+            handler.resolve(retryResponse);
+            return;
+          }
+          handler.next(error);
+        },
+      ),
+    );
   }
 
+  Future<Response<dynamic>?> _tryRefreshAndRetry(DioException error) async {
+    final status = error.response?.statusCode;
+    final request = error.requestOptions;
+
+    if (status != 401) return null;
+    if (request.extra['skipRefresh'] == true) return null;
+    if (request.extra['retried'] == true) return null;
+    if (request.path.startsWith('/auth/login') || request.path.startsWith('/auth/refresh')) {
+      return null;
+    }
+
+    final storedRefresh = await TokenStorage.readRefreshToken();
+    if (storedRefresh == null || storedRefresh.isEmpty) {
+      return null;
+    }
+
+    try {
+      await _refreshSession(existingToken: storedRefresh);
+    } catch (_) {
+      return null;
+    }
+
+    final token = await TokenStorage.read();
+    if (token == null || token.isEmpty) {
+      return null;
+    }
+
+    request.headers['Authorization'] = 'Bearer $token';
+    request.extra['retried'] = true;
+
+    try {
+      return await dio.fetch<dynamic>(request);
+    } on DioException {
+      return null;
+    }
+  }
+
+  Future<void> _refreshSession({String? existingToken}) async {
+    if (_refreshing != null) {
+      return _refreshing!.future;
+    }
+
+    final completer = Completer<void>();
+    _refreshing = completer;
+
+    try {
+      final storedRefresh = existingToken ?? await TokenStorage.readRefreshToken();
+      if (storedRefresh == null || storedRefresh.isEmpty) {
+        await TokenStorage.clear();
+        throw StateError('missing_refresh_token');
+      }
+
+      final deviceId = await ensureDeviceId();
+      final response = await dio.post(
+        '/auth/refresh',
+        data: {'refreshToken': storedRefresh, 'deviceId': deviceId},
+        options: Options(extra: {'skipRefresh': true}),
+      );
+
+      final data = response.data;
+      if (data is! Map) {
+        await TokenStorage.clear();
+        throw StateError('invalid_refresh_response');
+      }
+
+      final newAccess = data['accessToken'] as String?;
+      final newRefresh = data['refreshToken'] as String?;
+      if (newAccess == null || newAccess.isEmpty || newRefresh == null || newRefresh.isEmpty) {
+        await TokenStorage.clear();
+        throw StateError('missing_tokens');
+      }
+
+      await TokenStorage.save(newAccess);
+      await TokenStorage.saveRefreshToken(newRefresh);
+
+      final refreshExpires = data['refreshTokenExpiresAt'] as String?;
+      if (refreshExpires != null && refreshExpires.isNotEmpty) {
+        await TokenStorage.saveRefreshExpiresAt(refreshExpires);
+      } else {
+        await TokenStorage.clearRefreshExpiresAt();
+      }
+
+      final user = data['user'];
+      if (user is Map && user['role'] is String) {
+        await TokenStorage.saveRole((user['role'] as String?) ?? 'doctor');
+      }
+
+      completer.complete();
+    } catch (error) {
+      await TokenStorage.clear();
+      if (!completer.isCompleted) {
+        completer.completeError(error);
+      }
+      rethrow;
+    } finally {
+      _refreshing = null;
+    }
+  }
+
+  Future<void> _persistSessionFromResponse(Map<String, dynamic> data) async {
+    final token = data['accessToken'] as String?;
+    final refresh = data['refreshToken'] as String?;
+    if (token != null && token.isNotEmpty) {
+      await TokenStorage.save(token);
+    }
+    if (refresh != null && refresh.isNotEmpty) {
+      await TokenStorage.saveRefreshToken(refresh);
+    } else {
+      await TokenStorage.clearRefreshToken();
+    }
+    final refreshExpires = data['refreshTokenExpiresAt'] as String?;
+    if (refreshExpires != null && refreshExpires.isNotEmpty) {
+      await TokenStorage.saveRefreshExpiresAt(refreshExpires);
+    } else {
+      await TokenStorage.clearRefreshExpiresAt();
+    }
+  }
+
+  Future<void> clearSession() => TokenStorage.clear();
+
   // Month summary: one row per day with first IN / last OUT (strings)
-  Future<Map<String, dynamic>> myMonth(
-      {required int year, required int month}) async {
+  Future<Map<String, dynamic>> myMonth({required int year, required int month}) async {
     final r = await dio.get('/attendance/my-month', queryParameters: {
       'year': year,
       'month': month,
@@ -43,21 +179,50 @@ class ApiClient {
     return r.data as String;
   }
 
-  Future<String> login(String email, String password, String deviceId) async {
-    final r = await dio.post('/auth/login',
-        data: {'email': email, 'password': password, 'deviceId': deviceId});
-    final token = r.data['accessToken'] as String;
-    await TokenStorage.save(token);
-    return token;
+  Future<String> login(
+    String email,
+    String password,
+    String deviceId, {
+    bool rememberMe = false,
+  }) async {
+    final r = await dio.post(
+      '/auth/login',
+      data: {
+        'email': email,
+        'password': password,
+        'deviceId': deviceId,
+        'rememberMe': rememberMe,
+      },
+      options: Options(extra: {'skipRefresh': true}),
+    );
+    final data = Map<String, dynamic>.from(r.data as Map);
+    await _persistSessionFromResponse(data);
+    final user = data['user'];
+    if (user is Map && user['role'] is String) {
+      await TokenStorage.saveRole((user['role'] as String?) ?? 'doctor');
+    }
+    return data['accessToken'] as String;
   }
 
   Future<Map<String, dynamic>> loginAndGetUser(
-      String email, String password, String deviceId) async {
-    final r = await dio.post('/auth/login',
-        data: {'email': email, 'password': password, 'deviceId': deviceId});
-    final token = r.data['accessToken'] as String;
-    final user = Map<String, dynamic>.from(r.data['user'] as Map);
-    await TokenStorage.save(token);
+    String email,
+    String password,
+    String deviceId, {
+    bool rememberMe = false,
+  }) async {
+    final r = await dio.post(
+      '/auth/login',
+      data: {
+        'email': email,
+        'password': password,
+        'deviceId': deviceId,
+        'rememberMe': rememberMe,
+      },
+      options: Options(extra: {'skipRefresh': true}),
+    );
+    final data = Map<String, dynamic>.from(r.data as Map);
+    await _persistSessionFromResponse(data);
+    final user = Map<String, dynamic>.from(data['user'] as Map);
     await TokenStorage.saveRole((user['role'] as String?) ?? 'doctor');
     return user; // contains id, name, email, role
   }
@@ -68,14 +233,12 @@ class ApiClient {
   }
 
   Future<List<Map<String, dynamic>>> listDoctors() async {
-    final r =
-        await dio.get('/admin/users', queryParameters: {'role': 'doctor'});
+    final r = await dio.get('/admin/users', queryParameters: {'role': 'doctor'});
     final list = (r.data as List).cast<dynamic>();
     return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }
 
-  Future<String> doctorMonthCsv(
-      {required String userId, required int year, required int month}) async {
+  Future<String> doctorMonthCsv({required String userId, required int year, required int month}) async {
     final r = await dio.get(
       '/reports/doctor-month.csv',
       queryParameters: {'userId': userId, 'year': year, 'month': month},
@@ -96,14 +259,11 @@ class ApiClient {
   // Lists
   Future<List<Map<String, dynamic>>> listDevices() async {
     final r = await dio.get('/admin/devices');
-    return (r.data as List)
-        .map((e) => Map<String, dynamic>.from(e as Map))
-        .toList();
+    return (r.data as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }
 
   // Users
-  Future<void> updateUser(String id,
-      {String? fullName, String? role, bool? isActive}) async {
+  Future<void> updateUser(String id, {String? fullName, String? role, bool? isActive}) async {
     await dio.patch('/admin/users/$id', data: {
       if (fullName != null) 'fullName': fullName,
       if (role != null) 'role': role,
@@ -112,8 +272,7 @@ class ApiClient {
   }
 
   Future<void> resetUserPassword(String id, String newPassword) async {
-    await dio
-        .patch('/admin/users/$id/password', data: {'password': newPassword});
+    await dio.patch('/admin/users/$id/password', data: {'password': newPassword});
   }
 
   Future<void> setUserDevice(String id, String deviceId) async {
@@ -129,8 +288,7 @@ class ApiClient {
   }
 
   // Devices
-  Future<void> updateDevice(String id,
-      {String? name, String? location, bool? isActive}) async {
+  Future<void> updateDevice(String id, {String? name, String? location, bool? isActive}) async {
     await dio.patch('/admin/devices/$id', data: {
       if (name != null) 'name': name,
       if (location != null) 'location': location,
@@ -170,3 +328,20 @@ class ApiClient {
     return Map<String, dynamic>.from(r.data as Map);
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
