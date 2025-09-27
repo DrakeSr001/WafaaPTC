@@ -97,10 +97,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final isLight = theme.brightness == Brightness.light;
-    final backgroundGradientColors = isLight
+    final surfaceGradientColors = isLight
         ? const [Color(0xFFE9F1FF), Color(0xFFF9FBFF)]
         : [
-            Color.alphaBlend(scheme.primary.withOpacity(0.16), scheme.background),
+            Color.alphaBlend(scheme.primary.withValues(alpha: 0.16), scheme.surface),
             theme.scaffoldBackgroundColor,
           ];
     return Scaffold(
@@ -133,7 +133,7 @@ class _HomeScreenState extends State<HomeScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: backgroundGradientColors,
+            colors: surfaceGradientColors,
           ),
         ),
         child: SafeArea(
@@ -190,7 +190,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   color: theme.cardColor,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: scheme.outline.withOpacity(isLight ? 0.08 : 0.24),
+                    color: scheme.outline.withValues(alpha: isLight ? 0.08 : 0.24),
                   ),
                   boxShadow: isLight
                       ? const [
@@ -202,7 +202,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ]
                       : [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.5),
+                            color: Colors.black.withValues(alpha: 0.5),
                             blurRadius: 28,
                             offset: const Offset(0, 14),
                           ),
@@ -253,8 +253,8 @@ class _HeroBanner extends StatelessWidget {
     final gradientColors = isLight
         ? [scheme.primary, scheme.primaryContainer]
         : [
-            Color.alphaBlend(scheme.primary.withOpacity(0.20), scheme.surface),
-            Color.alphaBlend(scheme.primaryContainer.withOpacity(0.12), scheme.background),
+            Color.alphaBlend(scheme.primary.withValues(alpha: 0.20), scheme.surface),
+            Color.alphaBlend(scheme.primaryContainer.withValues(alpha: 0.12), scheme.surface),
           ];
 
     // ✅ Choose text color based on the banner's perceived brightness
@@ -265,9 +265,8 @@ class _HeroBanner extends StatelessWidget {
         ? scheme.onSurface  // light text for dark bg (Material sets this to near-white in dark theme)
         : scheme.onPrimary; // dark text for light primary bg
 
-    final idPrefix = deviceId == null
-        ? null
-        : deviceId!.substring(0, deviceId!.length >= 8 ? 8 : deviceId!.length);
+    final id = deviceId;
+    final idPrefix = id?.substring(0, id.length >= 8 ? 8 : id.length);
     final deviceSnippet = idPrefix == null
         ? 'Preparing your verified device ID...'
         : 'Device linked - $idPrefix...';
@@ -283,7 +282,7 @@ class _HeroBanner extends StatelessWidget {
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: isLight ? Colors.black26 : Colors.black.withOpacity(0.45),
+            color: isLight ? Colors.black26 : Colors.black.withValues(alpha: 0.45),
             blurRadius: 24,
             offset: const Offset(0, 18),
           ),
@@ -297,9 +296,9 @@ class _HeroBanner extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Today is ' + DateFormat('EEEE, MMM d').format(DateTime.now()),
+                'Today is ${DateFormat('EEEE, MMM d').format(DateTime.now())}',
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: textColor.withOpacity(0.85),
+                  color: textColor.withValues(alpha: 0.85),
                 ),
               ),
               const SizedBox(height: 8),
@@ -314,7 +313,7 @@ class _HeroBanner extends StatelessWidget {
               Text(
                 deviceSnippet,
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: textColor.withOpacity(0.90),
+                  color: textColor.withValues(alpha: 0.90),
                 ),
               ),
             ],
@@ -323,7 +322,7 @@ class _HeroBanner extends StatelessWidget {
           final logoCard = Container(
             decoration: BoxDecoration(
               // Slight translucent overlay that adapts to textColor choice
-              color: textColor.withOpacity(isLight ? 0.18 : 0.20),
+              color: textColor.withValues(alpha: isLight ? 0.18 : 0.20),
               borderRadius: BorderRadius.circular(24),
             ),
             padding: EdgeInsets.all(isWide ? 18 : 12),
@@ -382,8 +381,8 @@ class _QuickActionCard extends StatelessWidget {
     final isLight = theme.brightness == Brightness.light;
     final surface = scheme.surface;
     final shadowColor =
-        isLight ? color.withOpacity(0.28) : Colors.black.withOpacity(0.6);
-    final highlight = color.withOpacity(isLight ? 0.16 : 0.22);
+        isLight ? color.withValues(alpha: 0.28) : Colors.black.withValues(alpha: 0.6);
+    final highlight = color.withValues(alpha: isLight ? 0.16 : 0.22);
     final cardElevation = isLight ? 6.0 : 2.0;
     final isWide = MediaQuery.of(context).size.width > 720;
 
@@ -451,7 +450,7 @@ class _DeviceIdPanel extends StatelessWidget {
     final scheme = theme.colorScheme;
     final isLight = theme.brightness == Brightness.light;
     final surface = theme.cardColor;
-    final borderColor = scheme.outline.withOpacity(isLight ? 0.08 : 0.24);
+    final borderColor = scheme.outline.withValues(alpha: isLight ? 0.08 : 0.24);
     final shadow = isLight
         ? const [
             BoxShadow(
@@ -462,7 +461,7 @@ class _DeviceIdPanel extends StatelessWidget {
           ]
         : [
             BoxShadow(
-              color: Colors.black.withOpacity(0.5),
+              color: Colors.black.withValues(alpha: 0.5),
               blurRadius: 28,
               offset: const Offset(0, 14),
             ),
@@ -564,4 +563,15 @@ class _DeviceIdPanel extends StatelessWidget {
     );
   }
 }
+
+
+
+
+
+
+
+
+
+
+
 

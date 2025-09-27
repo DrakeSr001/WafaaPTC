@@ -174,7 +174,7 @@ class _MonthHistoryScreenState extends State<MonthHistoryScreen> {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(18),
                                 side: BorderSide(
-                                  color: scheme.outline.withOpacity(
+                                  color: scheme.outline.withValues(alpha: 
                                       isLight ? 0.08 : 0.3),
                                 ),
                               ),
@@ -209,3 +209,4 @@ class _MonthHistoryScreenState extends State<MonthHistoryScreen> {
     );
   }
 }
+

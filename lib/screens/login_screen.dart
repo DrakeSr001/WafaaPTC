@@ -194,7 +194,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final scheme = theme.colorScheme;
     final isLight = theme.brightness == Brightness.light;
     final accent = isLight ? scheme.primary : Colors.white;
-    final subtitleColor = accent.withOpacity(isLight ? 0.7 : 0.75);
+    final subtitleColor = accent.withValues(alpha: isLight ? 0.7 : 0.75);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -202,7 +202,7 @@ class _LoginScreenState extends State<LoginScreen> {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: accent.withOpacity(isLight ? 0.12 : 0.2),
+            color: accent.withValues(alpha: isLight ? 0.12 : 0.2),
             borderRadius: BorderRadius.circular(24),
           ),
           child: Image.asset(
@@ -245,18 +245,18 @@ class _LoginScreenState extends State<LoginScreen> {
     final backgroundGradientColors = isLight
         ? [
             Color.alphaBlend(
-              scheme.primary.withOpacity(0.04),
+              scheme.primary.withValues(alpha: 0.04),
               theme.scaffoldBackgroundColor,
             ),
             theme.scaffoldBackgroundColor,
           ]
         : [
             Color.alphaBlend(
-              scheme.primary.withOpacity(0.18),
+              scheme.primary.withValues(alpha: 0.18),
               theme.scaffoldBackgroundColor,
             ),
             Color.alphaBlend(
-              Colors.black.withOpacity(0.55),
+              Colors.black.withValues(alpha: 0.55),
               theme.scaffoldBackgroundColor,
             ),
             theme.scaffoldBackgroundColor,
@@ -502,28 +502,28 @@ class _RememberMeToggle extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              scheme.primary.withOpacity(0.92),
-              scheme.primaryContainer.withOpacity(0.88),
+              scheme.primary.withValues(alpha: 0.92),
+              scheme.primaryContainer.withValues(alpha: 0.88),
             ],
           )
         : null;
 
-    final fallbackSurface = scheme.surfaceVariant.withOpacity(
+    final fallbackSurface = scheme.surfaceContainerHighest.withValues(alpha: 
       theme.brightness == Brightness.dark ? 0.55 : 0.35,
     );
 
     final borderColor = isOn
-        ? scheme.primary.withOpacity(0.55)
-        : scheme.outlineVariant.withOpacity(0.7);
+        ? scheme.primary.withValues(alpha: 0.55)
+        : scheme.outlineVariant.withValues(alpha: 0.7);
 
     final titleColor = isOn
         ? scheme.onPrimary
         : theme.textTheme.titleSmall?.color ?? scheme.onSurface;
 
     final subtitleColor = isOn
-        ? scheme.onPrimary.withOpacity(0.85)
+        ? scheme.onPrimary.withValues(alpha: 0.85)
         : (theme.textTheme.bodySmall?.color ?? scheme.onSurfaceVariant)
-            .withOpacity(0.85);
+            .withValues(alpha: 0.85);
 
     return AnimatedOpacity(
       duration: const Duration(milliseconds: 180),
@@ -531,8 +531,8 @@ class _RememberMeToggle extends StatelessWidget {
       child: InkWell(
         onTap: enabled && onChanged != null ? () => onChanged!(!value) : null,
         borderRadius: BorderRadius.circular(22),
-        splashColor: scheme.primary.withOpacity(0.14),
-        highlightColor: scheme.primary.withOpacity(0.06),
+        splashColor: scheme.primary.withValues(alpha: 0.14),
+        highlightColor: scheme.primary.withValues(alpha: 0.06),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
@@ -544,14 +544,14 @@ class _RememberMeToggle extends StatelessWidget {
             boxShadow: isOn
                 ? [
                     BoxShadow(
-                      color: scheme.primary.withOpacity(0.32),
+                      color: scheme.primary.withValues(alpha: 0.32),
                       blurRadius: 26,
                       offset: const Offset(0, 14),
                     ),
                   ]
                 : [
                     BoxShadow(
-                      color: Colors.black.withOpacity(
+                      color: Colors.black.withValues(alpha: 
                         theme.brightness == Brightness.dark ? 0.42 : 0.1,
                       ),
                       blurRadius: 20,
@@ -569,7 +569,7 @@ class _RememberMeToggle extends StatelessWidget {
                   borderRadius: BorderRadius.circular(19),
                   color: isOn ? scheme.onPrimary : scheme.surface,
                   border: Border.all(
-                    color: isOn ? scheme.onPrimary : scheme.outline.withOpacity(0.55),
+                    color: isOn ? scheme.onPrimary : scheme.outline.withValues(alpha: 0.55),
                     width: 2,
                   ),
                 ),
@@ -613,8 +613,8 @@ class _RememberMeToggle extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(13),
                   color: isOn
-                      ? scheme.onPrimary.withOpacity(0.9)
-                      : scheme.surfaceVariant.withOpacity(0.5),
+                      ? scheme.onPrimary.withValues(alpha: 0.9)
+                      : scheme.surfaceContainerHighest.withValues(alpha: 0.5),
                 ),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 220),
@@ -646,14 +646,14 @@ class _GlassCard extends StatelessWidget {
     final isLight = theme.brightness == Brightness.light;
     final surface = scheme.surface;
     final overlayColor = isLight
-        ? Colors.white.withOpacity(0.92)
+        ? Colors.white.withValues(alpha: 0.92)
         : Color.alphaBlend(
-            scheme.primary.withOpacity(0.1),
+            scheme.primary.withValues(alpha: 0.1),
             surface,
-          ).withOpacity(0.96);
+          ).withValues(alpha: 0.96);
     final borderColor = isLight
-        ? Colors.white.withOpacity(0.35)
-        : scheme.primary.withOpacity(0.25);
+        ? Colors.white.withValues(alpha: 0.35)
+        : scheme.primary.withValues(alpha: 0.25);
     final shadows = isLight
         ? const [
             BoxShadow(
@@ -664,7 +664,7 @@ class _GlassCard extends StatelessWidget {
           ]
         : [
             BoxShadow(
-              color: Colors.black.withOpacity(0.45),
+              color: Colors.black.withValues(alpha: 0.45),
               offset: const Offset(0, 18),
               blurRadius: 40,
             ),
@@ -689,6 +689,7 @@ class _GlassCard extends StatelessWidget {
     );
   }
 }
+
 
 
 
