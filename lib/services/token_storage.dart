@@ -1,33 +1,82 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-class TokenStorage {
-  static const _k = FlutterSecureStorage();
+const FlutterSecureStorage _storage = FlutterSecureStorage(
+  webOptions: WebOptions(
+    dbName: 'wafaaptc_secure_db',
+    publicKey: 'wafaaptc_secure',
+  ),
+);
 
+const FlutterSecureStorage _legacyWebStorage = FlutterSecureStorage();
+
+const String _accessKey = 'accessToken';
+const String _refreshKey = 'refreshToken';
+const String _refreshExpiresKey = 'refreshTokenExpiresAt';
+const String _roleKey = 'role';
+
+class TokenStorage {
   static Future<void> save(String token) =>
-      _k.write(key: 'accessToken', value: token);
-  static Future<String?> read() => _k.read(key: 'accessToken');
+      _storage.write(key: _accessKey, value: token);
+
+  static Future<String?> read() => _readWithMigration(_accessKey);
 
   static Future<void> saveRefreshToken(String token) =>
-      _k.write(key: 'refreshToken', value: token);
-  static Future<String?> readRefreshToken() => _k.read(key: 'refreshToken');
-  static Future<void> clearRefreshToken() =>
-      _k.delete(key: 'refreshToken');
+      _storage.write(key: _refreshKey, value: token);
+
+  static Future<String?> readRefreshToken() => _readWithMigration(_refreshKey);
+
+  static Future<void> clearRefreshToken() async {
+    await _storage.delete(key: _refreshKey);
+    if (kIsWeb) {
+      await _legacyWebStorage.delete(key: _refreshKey);
+    }
+  }
 
   static Future<void> saveRefreshExpiresAt(String iso8601) =>
-      _k.write(key: 'refreshTokenExpiresAt', value: iso8601);
+      _storage.write(key: _refreshExpiresKey, value: iso8601);
+
   static Future<String?> readRefreshExpiresAt() =>
-      _k.read(key: 'refreshTokenExpiresAt');
-  static Future<void> clearRefreshExpiresAt() =>
-      _k.delete(key: 'refreshTokenExpiresAt');
+      _readWithMigration(_refreshExpiresKey);
+
+  static Future<void> clearRefreshExpiresAt() async {
+    await _storage.delete(key: _refreshExpiresKey);
+    if (kIsWeb) {
+      await _legacyWebStorage.delete(key: _refreshExpiresKey);
+    }
+  }
 
   static Future<void> clear() async {
-    await _k.delete(key: 'accessToken');
-    await _k.delete(key: 'refreshToken');
-    await _k.delete(key: 'refreshTokenExpiresAt');
-    await _k.delete(key: 'role');
+    await Future.wait([
+      _storage.delete(key: _accessKey),
+      _storage.delete(key: _refreshKey),
+      _storage.delete(key: _refreshExpiresKey),
+      _storage.delete(key: _roleKey),
+      if (kIsWeb) _legacyWebStorage.delete(key: _accessKey),
+      if (kIsWeb) _legacyWebStorage.delete(key: _refreshKey),
+      if (kIsWeb) _legacyWebStorage.delete(key: _refreshExpiresKey),
+      if (kIsWeb) _legacyWebStorage.delete(key: _roleKey),
+    ]);
   }
 
   static Future<void> saveRole(String role) =>
-      _k.write(key: 'role', value: role);
-  static Future<String?> readRole() => _k.read(key: 'role');
+      _storage.write(key: _roleKey, value: role);
+
+  static Future<String?> readRole() => _readWithMigration(_roleKey);
+}
+
+Future<String?> _readWithMigration(String key) async {
+  final value = await _storage.read(key: key);
+  if (value != null || !kIsWeb) {
+    return value;
+  }
+
+  final legacy = await _legacyWebStorage.read(key: key);
+  if (legacy == null) {
+    return null;
+  }
+
+  await _storage.write(key: key, value: legacy);
+  await _legacyWebStorage.delete(key: key);
+  return legacy;
 }

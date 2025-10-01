@@ -1,4 +1,4 @@
-import 'package:dio/dio.dart';
+﻿import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 
 import '../config.dart';
 import '../services/api_client.dart';
+import '../services/app_update_service.dart';
 import '../services/device_id.dart';
 import '../services/pending_scan.dart';
 import '../services/token_storage.dart';
@@ -26,6 +27,9 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      AppUpdateService.ensureLatest(context);
+    });
     _loadDeviceId();
     if (kIsWeb) {
       Future.microtask(_handlePendingScan);
@@ -100,7 +104,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final surfaceGradientColors = isLight
         ? const [Color(0xFFE9F1FF), Color(0xFFF9FBFF)]
         : [
-            Color.alphaBlend(scheme.primary.withValues(alpha: 0.16), scheme.surface),
+            Color.alphaBlend(
+                scheme.primary.withValues(alpha: 0.16), scheme.surface),
             theme.scaffoldBackgroundColor,
           ];
     return Scaffold(
@@ -190,7 +195,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   color: theme.cardColor,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: scheme.outline.withValues(alpha: isLight ? 0.08 : 0.24),
+                    color:
+                        scheme.outline.withValues(alpha: isLight ? 0.08 : 0.24),
                   ),
                   boxShadow: isLight
                       ? const [
@@ -253,16 +259,19 @@ class _HeroBanner extends StatelessWidget {
     final gradientColors = isLight
         ? [scheme.primary, scheme.primaryContainer]
         : [
-            Color.alphaBlend(scheme.primary.withValues(alpha: 0.20), scheme.surface),
-            Color.alphaBlend(scheme.primaryContainer.withValues(alpha: 0.12), scheme.surface),
+            Color.alphaBlend(
+                scheme.primary.withValues(alpha: 0.20), scheme.surface),
+            Color.alphaBlend(scheme.primaryContainer.withValues(alpha: 0.12),
+                scheme.surface),
           ];
 
-    // ✅ Choose text color based on the banner's perceived brightness
+    // Ã¢Å“â€¦ Choose text color based on the banner's perceived brightness
     // (in dark mode, use onSurface; in light mode, keep onPrimary for strong contrast)
     final bannerBgProbe = gradientColors.last;
     final bgBrightness = ThemeData.estimateBrightnessForColor(bannerBgProbe);
     final Color textColor = (bgBrightness == Brightness.dark)
-        ? scheme.onSurface  // light text for dark bg (Material sets this to near-white in dark theme)
+        ? scheme
+            .onSurface // light text for dark bg (Material sets this to near-white in dark theme)
         : scheme.onPrimary; // dark text for light primary bg
 
     final id = deviceId;
@@ -282,7 +291,8 @@ class _HeroBanner extends StatelessWidget {
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: isLight ? Colors.black26 : Colors.black.withValues(alpha: 0.45),
+            color:
+                isLight ? Colors.black26 : Colors.black.withValues(alpha: 0.45),
             blurRadius: 24,
             offset: const Offset(0, 18),
           ),
@@ -358,7 +368,6 @@ class _HeroBanner extends StatelessWidget {
   }
 }
 
-
 class _QuickActionCard extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -380,8 +389,9 @@ class _QuickActionCard extends StatelessWidget {
     final scheme = theme.colorScheme;
     final isLight = theme.brightness == Brightness.light;
     final surface = scheme.surface;
-    final shadowColor =
-        isLight ? color.withValues(alpha: 0.28) : Colors.black.withValues(alpha: 0.6);
+    final shadowColor = isLight
+        ? color.withValues(alpha: 0.28)
+        : Colors.black.withValues(alpha: 0.6);
     final highlight = color.withValues(alpha: isLight ? 0.16 : 0.22);
     final cardElevation = isLight ? 6.0 : 2.0;
     final isWide = MediaQuery.of(context).size.width > 720;
@@ -563,15 +573,3 @@ class _DeviceIdPanel extends StatelessWidget {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,4 +1,4 @@
-import 'dart:ui';
+﻿import 'dart:ui';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../config.dart';
 import '../services/api_client.dart';
+import '../services/app_update_service.dart';
 import '../services/device_id.dart';
 import '../services/token_storage.dart';
 
@@ -32,6 +33,9 @@ class _LoginScreenState extends State<LoginScreen> {
   void initState() {
     super.initState();
     _primeData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      AppUpdateService.ensureLatest(context);
+    });
   }
 
   Future<void> _primeData() async {
@@ -436,7 +440,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                     SelectableText(
                                       _deviceId ??
                                           'Generating a secure identifier...',
-
                                       style: GoogleFonts.robotoMono(
                                           fontSize: 14,
                                           color: theme
@@ -508,8 +511,8 @@ class _RememberMeToggle extends StatelessWidget {
           )
         : null;
 
-    final fallbackSurface = scheme.surfaceContainerHighest.withValues(alpha: 
-      theme.brightness == Brightness.dark ? 0.55 : 0.35,
+    final fallbackSurface = scheme.surfaceContainerHighest.withValues(
+      alpha: theme.brightness == Brightness.dark ? 0.55 : 0.35,
     );
 
     final borderColor = isOn
@@ -551,8 +554,8 @@ class _RememberMeToggle extends StatelessWidget {
                   ]
                 : [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 
-                        theme.brightness == Brightness.dark ? 0.42 : 0.1,
+                      color: Colors.black.withValues(
+                        alpha: theme.brightness == Brightness.dark ? 0.42 : 0.1,
                       ),
                       blurRadius: 20,
                       offset: const Offset(0, 12),
@@ -569,7 +572,9 @@ class _RememberMeToggle extends StatelessWidget {
                   borderRadius: BorderRadius.circular(19),
                   color: isOn ? scheme.onPrimary : scheme.surface,
                   border: Border.all(
-                    color: isOn ? scheme.onPrimary : scheme.outline.withValues(alpha: 0.55),
+                    color: isOn
+                        ? scheme.onPrimary
+                        : scheme.outline.withValues(alpha: 0.55),
                     width: 2,
                   ),
                 ),
@@ -633,6 +638,7 @@ class _RememberMeToggle extends StatelessWidget {
     );
   }
 }
+
 class _GlassCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
@@ -689,12 +695,3 @@ class _GlassCard extends StatelessWidget {
     );
   }
 }
-
-
-
-
-
-
-
-
-
