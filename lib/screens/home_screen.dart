@@ -55,6 +55,8 @@ class _HomeScreenState extends State<HomeScreen> {
         switch (raw) {
           case 'daily_limit_reached':
             return 'Attendance already captured today.';
+          case 'min_session_time':
+            return 'Please wait 10 minutes after checking in before checking out.';
           case 'invalid':
           case 'expired':
             return 'Invalid or expired QR code.';

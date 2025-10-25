@@ -21,6 +21,32 @@ class _ScanScreenState extends State<ScanScreen> {
   bool _busy = false;
   String? _status;
 
+  String _errorMessage(Object error) {
+    if (error is DioException) {
+      final data = error.response?.data;
+      final status = error.response?.statusCode;
+      if (data is Map && data['message'] is String) {
+        final raw = (data['message'] as String).trim();
+        switch (raw) {
+          case 'daily_limit_reached':
+            return 'Scan blocked: already checked out today.';
+          case 'min_session_time':
+            return 'Scan blocked: please wait 10 minutes between check-in and check-out.';
+          case 'invalid':
+          case 'expired':
+            return 'Scan failed: invalid or expired code.';
+          default:
+            final code = status != null ? ' ($status)' : '';
+            return 'Scan failed'+code+': ' + raw;
+        }
+      }
+      if (status != null) {
+        return 'Scan failed ($status).';
+      }
+    }
+    return 'Scan failed: invalid/expired code or network.';
+  }
+
   String? _extractCode(String raw) {
     final trimmed = raw.trim();
     if (trimmed.isEmpty) return null;
@@ -101,20 +127,7 @@ class _ScanScreenState extends State<ScanScreen> {
       if (!mounted) return;
       Navigator.pop(context);
     } catch (e) {
-      var message = 'Failed: invalid/expired code or network';
-      if (e is DioException) {
-        final data = e.response?.data;
-        final status = e.response?.statusCode;
-        final statusLabel = status != null ? ' ($status)' : '';
-        if (data is Map && data['message'] is String &&
-            (data['message'] as String).isNotEmpty) {
-          message = 'Failed$statusLabel: ${data['message']}';
-        } else if (e.message != null && e.message!.isNotEmpty) {
-          message = 'Failed$statusLabel: ${e.message!}';
-        } else if (status != null) {
-          message = 'Failed ($status)';
-        }
-      }
+      final message = _errorMessage(e);
       if (mounted) {
         setState(() => _status = message);
         ScaffoldMessenger.of(context).showSnackBar(
