@@ -256,6 +256,54 @@ class ApiClient {
     return r.data as String;
   }
 
+  Future<String> doctorRangeCsv({
+    required String userId,
+    required DateTime start,
+    required DateTime end,
+  }) async {
+    final r = await dio.get(
+      '/reports/doctor-range.csv',
+      queryParameters: {
+        'userId': userId,
+        'start': _dateParam(start),
+        'end': _dateParam(end),
+      },
+      options: Options(responseType: ResponseType.plain),
+    );
+    return r.data as String;
+  }
+
+  Future<String> clinicRangeCsv({
+    required DateTime start,
+    required DateTime end,
+  }) async {
+    final r = await dio.get(
+      '/reports/clinic-range.csv',
+      queryParameters: {
+        'start': _dateParam(start),
+        'end': _dateParam(end),
+      },
+      options: Options(responseType: ResponseType.plain),
+    );
+    return r.data as String;
+  }
+
+  Future<Map<String, dynamic>> doctorRangeSummary({
+    required String userId,
+    required DateTime start,
+    required DateTime end,
+  }) async {
+    final r = await dio.get(
+      '/reports/doctor-range-summary',
+      queryParameters: {
+        'userId': userId,
+        'start': _dateParam(start),
+        'end': _dateParam(end),
+      },
+    );
+    return Map<String, dynamic>.from(r.data as Map);
+  }
+
   // Lists
   Future<List<Map<String, dynamic>>> listDevices() async {
     final r = await dio.get('/admin/devices');
@@ -326,6 +374,13 @@ class ApiClient {
       if (location != null && location.isNotEmpty) 'location': location,
     });
     return Map<String, dynamic>.from(r.data as Map);
+  }
+
+  String _dateParam(DateTime value) {
+    final y = value.year.toString().padLeft(4, '0');
+    final m = value.month.toString().padLeft(2, '0');
+    final d = value.day.toString().padLeft(2, '0');
+    return '$y-$m-$d';
   }
 }
 

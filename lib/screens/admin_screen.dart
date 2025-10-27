@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -23,8 +25,16 @@ class _AdminScreenState extends State<AdminScreen>
   // Month selector
   late DateTime _selectedMonth;
 
+  // Custom range selector (for payroll exports)
+  late DateTime _rangeStart;
+  late DateTime _rangeEnd;
+  String _rangePreset = 'this_month';
+  bool _rangeSummaryLoading = false;
+  Map<String, dynamic>? _rangeSummary;
+
   // Busy flags
   bool _busy = false;
+  bool _rangeBusy = false;
   bool _creatingUser = false;
   bool _creatingDevice = false;
 
@@ -46,7 +56,10 @@ class _AdminScreenState extends State<AdminScreen>
   @override
   void initState() {
     super.initState();
-    _selectedMonth = DateTime(DateTime.now().year, DateTime.now().month, 1);
+    final now = DateTime.now();
+    _selectedMonth = DateTime(now.year, now.month, 1);
+    _rangeStart = _selectedMonth;
+    _rangeEnd = DateTime(now.year, now.month, now.day);
     _tab = TabController(length: 4, vsync: this); // was 3
     _loadDoctors();
   }
@@ -79,6 +92,11 @@ class _AdminScreenState extends State<AdminScreen>
           _selectedDoctor = null;
         }
       });
+      if (_doctors.isNotEmpty) {
+        await _loadRangeSummary();
+      } else if (mounted) {
+        setState(() => _rangeSummary = null);
+      }
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -136,6 +154,537 @@ class _AdminScreenState extends State<AdminScreen>
           .showSnackBar(const SnackBar(content: Text('Export failed.')));
     } finally {
       if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _exportDoctorRangeCsv() async {
+    if (_rangeBusy || _selectedDoctor == null) return;
+    setState(() => _rangeBusy = true);
+    try {
+      final uid = _selectedDoctor!['id'] as String;
+      final csv = await _api.doctorRangeCsv(
+        userId: uid,
+        start: _rangeStart,
+        end: _rangeEnd,
+      );
+      final namePart = (_selectedDoctor!['name'] as String).replaceAll(' ', '_');
+      await saveAndShareTextFile(
+        'doctor-$namePart-${_rangeFileSuffix()}.csv',
+        csv,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Range export failed.')),
+      );
+    } finally {
+      if (mounted) setState(() => _rangeBusy = false);
+    }
+  }
+
+  Future<void> _exportClinicRangeCsv() async {
+    if (_rangeBusy) return;
+    setState(() => _rangeBusy = true);
+    try {
+      final csv = await _api.clinicRangeCsv(
+        start: _rangeStart,
+        end: _rangeEnd,
+      );
+      await saveAndShareTextFile(
+        'clinic-${_rangeFileSuffix()}.csv',
+        csv,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Range export failed.')),
+      );
+    } finally {
+      if (mounted) setState(() => _rangeBusy = false);
+    }
+  }
+
+  Future<void> _exportSummaryCsv() async {
+    final summary = _rangeSummary;
+    if (summary == null) return;
+    final days = (summary['days'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+    final buffer = StringBuffer();
+    buffer.writeln('Date,Weekday,First IN,Last OUT,Worked (hh:mm)');
+    for (final day in days) {
+      buffer.writeln(
+          '${day['date']},${day['weekday'] ?? ''},${day['in'] ?? ''},${day['out'] ?? ''},${day['hours'] ?? ''}');
+    }
+    buffer.writeln();
+    buffer.writeln('Total Hours,,,${summary['totalHours'] ?? ''}');
+    buffer.writeln('Worked Days,,,${summary['workedDays'] ?? ''}');
+    buffer.writeln(
+        'Average per Worked Day,,,${summary['averagePerWorkedDay'] ?? ''}');
+    await saveAndShareTextFile(
+      'doctor-summary-${_rangeFileSuffix()}.csv',
+      buffer.toString(),
+    );
+  }
+
+  String _rangeFileSuffix() {
+    final formatter = DateFormat('yyyyMMdd');
+    return '${formatter.format(_rangeStart)}-${formatter.format(_rangeEnd)}';
+  }
+
+  Widget _buildExportsTab() {
+    if (_loadingUsers) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_doctors.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Text(
+            'No doctors found yet. Create doctors first, then come back to export their attendance.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
+        ),
+      );
+    }
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildDoctorSelectorCard(),
+          const SizedBox(height: 16),
+          _buildMonthlyExportsCard(),
+          const SizedBox(height: 16),
+          _buildRangeExportsCard(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDoctorSelectorCard() {
+    final theme = Theme.of(context);
+    final selected = _selectedDoctor;
+    final doctorEmail = selected?['email'] as String? ?? '';
+    final doctorId = selected?['id'] as String? ?? '';
+    final shortenedId = doctorId.isEmpty
+        ? '—'
+        : (doctorId.length > 10 ? '${doctorId.substring(0, 10)}…' : doctorId);
+    return Card(
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Select doctor',
+                style: theme.textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<Map<String, dynamic>>(
+              value: _selectedDoctor,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Doctor',
+                border: OutlineInputBorder(),
+              ),
+              items: _doctors.map((d) {
+                final email = d['email'] as String? ?? '';
+                return DropdownMenuItem(
+                  value: d,
+                  child: Text('${d['name']}  ($email)'),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() => _selectedDoctor = value);
+                _loadRangeSummary();
+              },
+            ),
+            if (selected != null) ...[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  Chip(
+                    avatar: const Icon(Icons.mail, size: 16),
+                    label: Text(doctorEmail),
+                  ),
+                  Chip(
+                    avatar: const Icon(Icons.badge_outlined, size: 16),
+                    label: Text('ID: $shortenedId'),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMonthlyExportsCard() {
+    final theme = Theme.of(context);
+    final monthLabel = DateFormat('MMMM yyyy').format(_selectedMonth);
+    return Card(
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Quick monthly exports',
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: _pickMonth,
+                  icon: const Icon(Icons.calendar_month_outlined),
+                  label: Text(monthLabel),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            const Text(
+                'Download full-month attendance for payroll and archival purposes.'),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                FilledButton.icon(
+                  onPressed: (_selectedDoctor == null || _busy)
+                      ? null
+                      : _exportDoctorCsv,
+                  icon: _busy
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.person_outline),
+                  label: const Text('Doctor CSV (month)'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: _busy ? null : _exportClinicCsv,
+                icon: _busy
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.apartment_outlined),
+                  label: const Text('Clinic CSV (month)'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRangeExportsCard() {
+    final theme = Theme.of(context);
+    final rangeLabel =
+        '${DateFormat('MMM d, yyyy').format(_rangeStart)} – ${DateFormat('MMM d, yyyy').format(_rangeEnd)}';
+    final totalDays = _rangeEnd.difference(_rangeStart).inDays + 1;
+    return Card(
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Custom range & payroll insights',
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: _pickCustomRange,
+                  icon: const Icon(Icons.date_range_outlined),
+                  label: const Text('Pick dates'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text('Range: $rangeLabel  •  $totalDays days'),
+            const SizedBox(height: 12),
+            _buildRangePresetChips(),
+            const SizedBox(height: 16),
+            _buildRangeSummaryContent(),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                FilledButton.icon(
+                  onPressed: (_selectedDoctor == null || _rangeBusy)
+                      ? null
+                      : _exportDoctorRangeCsv,
+                  icon: _rangeBusy
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.person_pin_circle_outlined),
+                  label: const Text('Doctor CSV (range)'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: _rangeBusy ? null : _exportClinicRangeCsv,
+                  icon: _rangeBusy
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.domain_outlined),
+                  label: const Text('Clinic CSV (range)'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: (_rangeSummary == null || _rangeSummaryLoading)
+                      ? null
+                      : _exportSummaryCsv,
+                  icon: const Icon(Icons.table_view_outlined),
+                  label: const Text('Download summary CSV'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRangePresetChips() {
+    final presets = [
+      {'key': 'last_7', 'label': 'Last 7 days'},
+      {'key': 'this_month', 'label': 'This month'},
+      {'key': 'last_month', 'label': 'Last month'},
+      {'key': 'custom', 'label': 'Custom'},
+    ];
+    return Wrap(
+      spacing: 8,
+      children: presets.map((preset) {
+        final key = preset['key']!;
+        final label = preset['label']!;
+        return ChoiceChip(
+          label: Text(label),
+          selected: _rangePreset == key,
+          onSelected: (selected) {
+            if (!selected) return;
+            if (key == 'custom') {
+              _pickCustomRange();
+            } else {
+              _applyRangePreset(key);
+            }
+          },
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildRangeSummaryContent() {
+    if (_rangeSummaryLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_selectedDoctor == null) {
+      return const Text('Choose a doctor to see payroll insights.');
+    }
+    final summary = _rangeSummary;
+    if (summary == null) {
+      return const Text('No summary available for this doctor yet.');
+    }
+    final totalHours = summary['totalHours'] as String? ?? '00:00';
+    final workedDays = summary['workedDays'] as int? ?? 0;
+    final avg = summary['averagePerWorkedDay'] as String? ?? '--';
+    final days =
+        (summary['days'] as List?)?.cast<Map<String, dynamic>>() ?? <Map<String, dynamic>>[];
+
+    final listHeight = days.isEmpty
+        ? 120.0
+        : math.min(360.0, 64.0 * days.length);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            Chip(
+              avatar: const Icon(Icons.timer_outlined, size: 18),
+              label: Text('Total ${totalHours}'),
+            ),
+            Chip(
+              avatar: const Icon(Icons.calendar_today_outlined, size: 18),
+              label: Text('$workedDays worked day${workedDays == 1 ? '' : 's'}'),
+            ),
+            Chip(
+              avatar: const Icon(Icons.bar_chart_outlined, size: 18),
+              label: Text('Avg / worked day: $avg'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+          ),
+          child: days.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Text('No attendance found in this range.'),
+                )
+              : SizedBox(
+                  height: listHeight,
+                  child: Scrollbar(
+                    thumbVisibility: true,
+                    child: ListView.separated(
+                      primary: false,
+                      shrinkWrap: true,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      itemCount: days.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (_, index) {
+                        final day = days[index];
+                        final date = DateTime.parse(day['date'] as String);
+                        final weekday = day['weekday'] as String? ??
+                            DateFormat('EEE').format(date);
+                        final inStr = (day['in'] as String?) ?? '—';
+                        final outStr = (day['out'] as String?) ?? '—';
+                        final hours = (day['hours'] as String?) ?? '00:00';
+                        final minutes = day['minutes'] as int? ?? 0;
+                        final hasWork = minutes > 0;
+                        final colorScheme = Theme.of(context).colorScheme;
+                        final avatarBg = hasWork
+                            ? colorScheme.secondaryContainer
+                            : colorScheme.surfaceVariant;
+                        final avatarFg = hasWork
+                            ? colorScheme.onSecondaryContainer
+                            : colorScheme.onSurfaceVariant;
+                        return ListTile(
+                          dense: true,
+                          leading: CircleAvatar(
+                            backgroundColor: avatarBg,
+                            foregroundColor: avatarFg,
+                            child: Text(
+                              DateFormat('d').format(date),
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          title: Text(
+                            '${DateFormat('EEE, MMM d').format(date)}',
+                            style: TextStyle(
+                              fontWeight:
+                                  hasWork ? FontWeight.w600 : FontWeight.normal,
+                            ),
+                          ),
+                          subtitle: Text('In: $inStr   •   Out: $outStr'),
+                          trailing: Text(
+                            hours,
+                            style: TextStyle(
+                              fontWeight:
+                                  hasWork ? FontWeight.w600 : FontWeight.normal,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _applyRangePreset(String preset) async {
+    final now = DateTime.now();
+    late DateTime start;
+    late DateTime end;
+    switch (preset) {
+      case 'last_7':
+        end = DateTime(now.year, now.month, now.day);
+        start = end.subtract(const Duration(days: 6));
+        break;
+      case 'last_month':
+        final firstOfThisMonth = DateTime(now.year, now.month, 1);
+        end = firstOfThisMonth.subtract(const Duration(days: 1));
+        start = DateTime(end.year, end.month, 1);
+        break;
+      case 'this_month':
+      default:
+        start = DateTime(now.year, now.month, 1);
+        end = DateTime(now.year, now.month, now.day);
+        preset = 'this_month';
+        break;
+    }
+    setState(() {
+      _rangePreset = preset;
+      _rangeStart = start;
+      _rangeEnd = end;
+    });
+    await _loadRangeSummary();
+  }
+
+  Future<void> _pickCustomRange() async {
+    final now = DateTime.now();
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(now.year - 3, 1, 1),
+      lastDate: DateTime(now.year + 1, 12, 31),
+      initialDateRange: DateTimeRange(
+        start: _rangeStart,
+        end: _rangeEnd,
+      ),
+      helpText: 'Select date range',
+    );
+    if (picked == null) return;
+    final start = DateTime(picked.start.year, picked.start.month, picked.start.day);
+    final end = DateTime(picked.end.year, picked.end.month, picked.end.day);
+    setState(() {
+      _rangePreset = 'custom';
+      _rangeStart = start;
+      _rangeEnd = end;
+    });
+    await _loadRangeSummary();
+  }
+
+  Future<void> _loadRangeSummary() async {
+    if (_selectedDoctor == null) {
+      if (mounted) setState(() => _rangeSummary = null);
+      return;
+    }
+    setState(() => _rangeSummaryLoading = true);
+    try {
+      final summary = await _api.doctorRangeSummary(
+        userId: _selectedDoctor!['id'] as String,
+        start: _rangeStart,
+        end: _rangeEnd,
+      );
+      if (!mounted) return;
+      setState(() => _rangeSummary = summary);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not load range summary.')),
+      );
+    } finally {
+      if (mounted) setState(() => _rangeSummaryLoading = false);
     }
   }
 
@@ -248,50 +797,7 @@ Copy this into the kiosk app config.dart'''),
         controller: _tab,
         children: [
           // ======== Tab 1: Exports ========
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: _loadingUsers
-                ? const Center(child: CircularProgressIndicator())
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Select Doctor',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 8),
-                      DropdownButton<Map<String, dynamic>>(
-                        isExpanded: true,
-                        value: _selectedDoctor,
-                        items: _doctors.map((d) {
-                          return DropdownMenuItem(
-                            value: d,
-                            child: Text('${d['name']}  (${d['email']})'),
-                          );
-                        }).toList(),
-                        onChanged: (v) => setState(() => _selectedDoctor = v),
-                      ),
-                      const SizedBox(height: 24),
-                      Wrap(
-                        spacing: 12,
-                        runSpacing: 8,
-                        children: [
-                          ElevatedButton.icon(
-                            onPressed: (_selectedDoctor == null || _busy)
-                                ? null
-                                : _exportDoctorCsv,
-                            icon: const Icon(Icons.file_download),
-                            label: const Text('Export Doctor CSV'),
-                          ),
-                          const SizedBox(width: 12),
-                          ElevatedButton.icon(
-                            onPressed: _busy ? null : _exportClinicCsv,
-                            icon: const Icon(Icons.file_download_done),
-                            label: const Text('Export Clinic CSV'),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-          ),
+          _buildExportsTab(),
 
           // ======== Tab 2: Create User ========
           SingleChildScrollView(
