@@ -139,8 +139,8 @@ class AppUpdateService {
       context: parent,
       barrierDismissible: !requiresUpgrade,
       builder: (dialogContext) {
-        return WillPopScope(
-          onWillPop: () async => !requiresUpgrade,
+        return PopScope(
+          canPop: !requiresUpgrade,
           child: AlertDialog(
             title:
                 Text(requiresUpgrade ? 'Update required' : 'Update available'),

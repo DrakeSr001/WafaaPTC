@@ -282,7 +282,10 @@ class _AdminScreenState extends State<AdminScreen>
                     ?.copyWith(fontWeight: FontWeight.w600)),
             const SizedBox(height: 12),
             DropdownButtonFormField<Map<String, dynamic>>(
-              value: _selectedDoctor,
+              key: ValueKey<String>(
+                (_selectedDoctor?['id'] as String?) ?? 'doctor-null',
+              ),
+              initialValue: _selectedDoctor,
               isExpanded: true,
               decoration: const InputDecoration(
                 labelText: 'Doctor',

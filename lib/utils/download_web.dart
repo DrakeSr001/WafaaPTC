@@ -1,29 +1,33 @@
-import 'dart:html' as html;
+import 'dart:convert';
+
+import 'package:web/web.dart' as web;
 
 /// Triggers a browser download of the text content (no saving to disk path).
 Future<void> saveAndShareTextFile(String filename, String content) async {
-  final encoded = Uri.encodeComponent(content);
-  final url = 'data:text/csv;charset=utf-8,$encoded';
-  final anchor = html.AnchorElement()
-    ..href = url
-    ..download = filename
-    ..style.display = 'none';
-  html.document.body?.append(anchor);
-  anchor.click();
-  anchor.remove();
+  final url = Uri.dataFromString(
+    content,
+    mimeType: 'text/csv',
+    encoding: utf8,
+  ).toString();
+  _triggerDownload(filename, url);
 }
 
 Future<void> saveAndShareBinaryFile(String filename, List<int> bytes) async {
-  final blob = html.Blob([bytes], 'application/octet-stream');
-  final url = html.Url.createObjectUrlFromBlob(blob);
-  final anchor = html.AnchorElement()
+  final url = Uri.dataFromBytes(
+    bytes,
+    mimeType: 'application/octet-stream',
+  ).toString();
+  _triggerDownload(filename, url);
+}
+
+void _triggerDownload(String filename, String url) {
+  final anchor = web.HTMLAnchorElement()
     ..href = url
     ..download = filename
     ..style.display = 'none';
-  html.document.body?.append(anchor);
+  web.document.body?.append(anchor);
   anchor.click();
   anchor.remove();
-  html.Url.revokeObjectUrl(url);
 }
 
 
