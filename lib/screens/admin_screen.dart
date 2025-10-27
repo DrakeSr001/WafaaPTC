@@ -147,7 +147,7 @@ class _AdminScreenState extends State<AdminScreen>
       final y = _selectedMonth.year, m = _selectedMonth.month;
       final workbook = await _api.clinicMonthWorkbook(year: y, month: m);
       final mm = m.toString().padLeft(2, '0');
-      await saveAndShareBinaryFile('clinic-$y-$mm.xlsx', workbook);
+      await saveAndShareBinaryFile('clinic-$y-$mm.csv', workbook);
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
@@ -191,7 +191,7 @@ class _AdminScreenState extends State<AdminScreen>
         end: _rangeEnd,
       );
       await saveAndShareBinaryFile(
-        'clinic-${_rangeFileSuffix()}.xlsx',
+        'clinic-${_rangeFileSuffix()}.csv',
         workbook,
       );
     } catch (_) {
