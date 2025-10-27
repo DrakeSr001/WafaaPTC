@@ -1,4 +1,4 @@
-﻿import 'package:dio/dio.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
@@ -37,7 +37,7 @@ class _ScanScreenState extends State<ScanScreen> {
             return 'Scan failed: invalid or expired code.';
           default:
             final code = status != null ? ' ($status)' : '';
-            return 'Scan failed'+code+': ' + raw;
+            return 'Scan failed$code: $raw';
         }
       }
       if (status != null) {

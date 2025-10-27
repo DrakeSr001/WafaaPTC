@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-
-import 'config.dart';
-import 'screens/admin_screen.dart';
-import 'screens/home_screen.dart';
-import 'screens/login_screen.dart';
-import 'screens/month_history_screen.dart';
-import 'screens/scan_screen.dart';
+import 'package:wafaaptc/config.dart';
+import 'package:wafaaptc/screens/admin_screen.dart';
+import 'package:wafaaptc/screens/home_screen.dart';
+import 'package:wafaaptc/screens/login_screen.dart';
+import 'package:wafaaptc/screens/month_history_screen.dart';
+import 'package:wafaaptc/screens/scan_screen.dart';
 
 void main() {
   runApp(const DoctorApp());
