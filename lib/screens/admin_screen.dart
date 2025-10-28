@@ -140,14 +140,14 @@ class _AdminScreenState extends State<AdminScreen>
     }
   }
 
-  Future<void> _exportClinicWorkbook() async {
+  Future<void> _exportClinicCsv() async {
     if (_busy) return;
     setState(() => _busy = true);
     try {
       final y = _selectedMonth.year, m = _selectedMonth.month;
-      final workbook = await _api.clinicMonthWorkbook(year: y, month: m);
+      final csv = await _api.clinicMonthCsv(year: y, month: m);
       final mm = m.toString().padLeft(2, '0');
-      await saveAndShareBinaryFile('clinic-$y-$mm.xlsx', workbook);
+      await saveAndShareTextFile('clinic-$y-$mm.csv', csv);
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
@@ -182,17 +182,17 @@ class _AdminScreenState extends State<AdminScreen>
     }
   }
 
-  Future<void> _exportClinicRangeWorkbook() async {
+  Future<void> _exportClinicRangeCsv() async {
     if (_rangeBusy) return;
     setState(() => _rangeBusy = true);
     try {
-      final workbook = await _api.clinicRangeWorkbook(
+      final csv = await _api.clinicRangeCsv(
         start: _rangeStart,
         end: _rangeEnd,
       );
-      await saveAndShareBinaryFile(
-        'clinic-${_rangeFileSuffix()}.xlsx',
-        workbook,
+      await saveAndShareTextFile(
+        'clinic-${_rangeFileSuffix()}.csv',
+        csv,
       );
     } catch (_) {
       if (!mounted) return;
@@ -375,7 +375,7 @@ class _AdminScreenState extends State<AdminScreen>
                   label: const Text('Doctor CSV (month)'),
                 ),
                 OutlinedButton.icon(
-                  onPressed: _busy ? null : _exportClinicWorkbook,
+                  onPressed: _busy ? null : _exportClinicCsv,
                 icon: _busy
                     ? const SizedBox(
                         width: 18,
@@ -447,7 +447,7 @@ class _AdminScreenState extends State<AdminScreen>
                   label: const Text('Doctor CSV (range)'),
                 ),
                 OutlinedButton.icon(
-                  onPressed: _rangeBusy ? null : _exportClinicRangeWorkbook,
+                  onPressed: _rangeBusy ? null : _exportClinicRangeCsv,
                   icon: _rangeBusy
                       ? const SizedBox(
                           width: 18,

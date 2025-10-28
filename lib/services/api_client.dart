@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
-
 import 'package:dio/dio.dart';
 
 import '../config.dart';
@@ -248,13 +246,13 @@ class ApiClient {
     return r.data as String;
   }
 
-  Future<Uint8List> clinicMonthWorkbook({required int year, required int month}) async {
+  Future<String> clinicMonthCsv({required int year, required int month}) async {
     final r = await dio.get(
       '/reports/clinic-month.csv',
       queryParameters: {'year': year, 'month': month},
-      options: Options(responseType: ResponseType.bytes),
+      options: Options(responseType: ResponseType.plain),
     );
-    return _asBytes(r.data);
+    return r.data as String;
   }
 
   Future<String> doctorRangeCsv({
@@ -274,7 +272,7 @@ class ApiClient {
     return r.data as String;
   }
 
-  Future<Uint8List> clinicRangeWorkbook({
+  Future<String> clinicRangeCsv({
     required DateTime start,
     required DateTime end,
   }) async {
@@ -284,9 +282,9 @@ class ApiClient {
         'start': _dateParam(start),
         'end': _dateParam(end),
       },
-      options: Options(responseType: ResponseType.bytes),
+      options: Options(responseType: ResponseType.plain),
     );
-    return _asBytes(r.data);
+    return r.data as String;
   }
 
   Future<Map<String, dynamic>> doctorRangeSummary({
@@ -375,12 +373,6 @@ class ApiClient {
       if (location != null && location.isNotEmpty) 'location': location,
     });
     return Map<String, dynamic>.from(r.data as Map);
-  }
-
-  Uint8List _asBytes(dynamic data) {
-    if (data is Uint8List) return data;
-    if (data is List<int>) return Uint8List.fromList(List<int>.from(data));
-    throw StateError('unexpected_binary_payload');
   }
 
   String _dateParam(DateTime value) {
