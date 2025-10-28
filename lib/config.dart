@@ -1,4 +1,4 @@
-const String backendBaseUrl = 'https://physical-therapy-api.onrender.com';
+const String backendBaseUrl = 'https://physical-therapy-api-cg1z.onrender.com';
 const String webAppBaseUrl = 'https://physical-therapy-qr-code.netlify.app';
 const String androidUpdateManifestUrl =
     'https://physical-therapy-api-cg1z.onrender.com/app/releases/android';

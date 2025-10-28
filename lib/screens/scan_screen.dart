@@ -25,6 +25,9 @@ class _ScanScreenState extends State<ScanScreen> {
     if (error is DioException) {
       final data = error.response?.data;
       final status = error.response?.statusCode;
+      if (status == 401) {
+        return 'Session expired. Please sign in again and rescan.';
+      }
       if (data is Map && data['message'] is String) {
         final raw = (data['message'] as String).trim();
         switch (raw) {
