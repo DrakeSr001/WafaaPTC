@@ -15,7 +15,7 @@ Future<void> saveAndShareTextFile(String filename, String content) async {
 Future<void> saveAndShareBinaryFile(String filename, List<int> bytes) async {
   final url = Uri.dataFromBytes(
     bytes,
-    mimeType: 'application/octet-stream',
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   ).toString();
   _triggerDownload(filename, url);
 }

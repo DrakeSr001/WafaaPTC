@@ -25,7 +25,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _busy = false;
   bool _showPassword = false;
-  bool _rememberMe = false;
+  bool _rememberMe = true;
   String? _err;
   String? _deviceId;
 
@@ -44,7 +44,10 @@ class _LoginScreenState extends State<LoginScreen> {
     if (mounted) {
       setState(() {
         _deviceId = id;
-        _rememberMe = refresh != null && refresh.isNotEmpty;
+        _rememberMe = true; // default to persistent sessions for stability
+        if (refresh != null && refresh.isNotEmpty) {
+          _rememberMe = true;
+        }
       });
     }
 
