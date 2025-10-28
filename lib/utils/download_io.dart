@@ -8,10 +8,17 @@ import 'package:share_plus/share_plus.dart';
 Future<void> saveAndShareTextFile(String filename, String content) async {
   final dir = await getApplicationDocumentsDirectory();
   final file = File('${dir.path}/$filename');
-  await file.writeAsString(content, flush: true);
+  const bom = '\uFEFF';
+  await file.writeAsString('$bom$content', flush: true);
   await SharePlus.instance.share(
     ShareParams(
-      files: [XFile(file.path)],
+      files: [
+        XFile(
+          file.path,
+          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          name: filename,
+        ),
+      ],
       text: filename,
     ),
   );
