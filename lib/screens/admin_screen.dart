@@ -140,14 +140,14 @@ class _AdminScreenState extends State<AdminScreen>
     }
   }
 
-  Future<void> _exportClinicCsv() async {
+  Future<void> _exportClinicWorkbook() async {
     if (_busy) return;
     setState(() => _busy = true);
     try {
       final y = _selectedMonth.year, m = _selectedMonth.month;
-      final csv = await _api.clinicMonthCsv(year: y, month: m);
+      final workbook = await _api.clinicMonthWorkbook(year: y, month: m);
       final mm = m.toString().padLeft(2, '0');
-      await saveAndShareTextFile('clinic-$y-$mm.csv', csv);
+      await saveAndShareBinaryFile('clinic-$y-$mm.xlsx', workbook);
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
@@ -182,17 +182,17 @@ class _AdminScreenState extends State<AdminScreen>
     }
   }
 
-  Future<void> _exportClinicRangeCsv() async {
+  Future<void> _exportClinicRangeWorkbook() async {
     if (_rangeBusy) return;
     setState(() => _rangeBusy = true);
     try {
-      final csv = await _api.clinicRangeCsv(
+      final workbook = await _api.clinicRangeWorkbook(
         start: _rangeStart,
         end: _rangeEnd,
       );
-      await saveAndShareTextFile(
-        'clinic-${_rangeFileSuffix()}.csv',
-        csv,
+      await saveAndShareBinaryFile(
+        'clinic-${_rangeFileSuffix()}.xlsx',
+        workbook,
       );
     } catch (_) {
       if (!mounted) return;
@@ -375,7 +375,7 @@ class _AdminScreenState extends State<AdminScreen>
                   label: const Text('Doctor CSV (month)'),
                 ),
                 OutlinedButton.icon(
-                  onPressed: _busy ? null : _exportClinicCsv,
+                  onPressed: _busy ? null : _exportClinicWorkbook,
                 icon: _busy
                     ? const SizedBox(
                         width: 18,
@@ -383,7 +383,7 @@ class _AdminScreenState extends State<AdminScreen>
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.apartment_outlined),
-                  label: const Text('Clinic CSV (month)'),
+                  label: const Text('Clinic XLSX (month)'),
                 ),
               ],
             ),
@@ -447,7 +447,7 @@ class _AdminScreenState extends State<AdminScreen>
                   label: const Text('Doctor CSV (range)'),
                 ),
                 OutlinedButton.icon(
-                  onPressed: _rangeBusy ? null : _exportClinicRangeCsv,
+                  onPressed: _rangeBusy ? null : _exportClinicRangeWorkbook,
                   icon: _rangeBusy
                       ? const SizedBox(
                           width: 18,
@@ -455,7 +455,7 @@ class _AdminScreenState extends State<AdminScreen>
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.domain_outlined),
-                  label: const Text('Clinic CSV (range)'),
+                  label: const Text('Clinic XLSX (range)'),
                 ),
                 OutlinedButton.icon(
                   onPressed: (_rangeSummary == null || _rangeSummaryLoading)
