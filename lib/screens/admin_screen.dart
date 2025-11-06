@@ -736,6 +736,7 @@ class _AdminScreenState extends State<AdminScreen>
             : _deviceLocation.text.trim(),
       );
       final apiKey = res['apiKey'] as String? ?? '';
+      final offlineSecret = res['offlineSecret'] as String? ?? '';
       _deviceName.clear();
       _deviceLocation.clear();
       if (!mounted) return;
@@ -746,7 +747,10 @@ class _AdminScreenState extends State<AdminScreen>
           content: SelectableText('''API Key:
 $apiKey
 
-Copy this into the kiosk app config.dart'''),
+Offline Secret:
+$offlineSecret
+
+Configure the kiosk app with both values, then sync once while online. The app can generate QR codes locally afterwards.'''),
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(context),
@@ -1467,6 +1471,10 @@ class _DevicesManagerState extends State<_DevicesManager> {
               children: [
                 Text('Location: ${(d['location'] as String?) ?? '-'}'),
                 Text('Key: ${(d['apiKey'] as String?) ?? '-'}'),
+                Text(
+                  'Offline secret: ${(d['hasOfflineSecret'] as bool? ?? false) ? 'Provisioned' : 'Needs sync'}',
+                ),
+                Text('Device ID: ${(d['id'] as String?)?.substring(0, 8) ?? '-'}...'),
               ],
             ),
             isThreeLine: true,
