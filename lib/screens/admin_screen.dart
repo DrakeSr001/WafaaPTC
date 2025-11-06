@@ -565,7 +565,6 @@ class _AdminScreenState extends State<AdminScreen>
                       itemBuilder: (_, index) {
                         final day = days[index];
                         final date = DateTime.parse(day['date'] as String);
-                            DateFormat('EEE').format(date);
                         final inStr = (day['in'] as String?) ?? '\u2014';
                         final outStr = (day['out'] as String?) ?? '\u2014';
                         final hours = (day['hours'] as String?) ?? '00:00';
@@ -596,12 +595,23 @@ class _AdminScreenState extends State<AdminScreen>
                             ),
                           ),
                           subtitle: Text('In: $inStr   |   Out: $outStr'),
-                          trailing: Text(
-                            hours,
-                            style: TextStyle(
-                              fontWeight:
-                                  hasWork ? FontWeight.w600 : FontWeight.normal,
-                            ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                hours,
+                                style: TextStyle(
+                                  fontWeight: hasWork
+                                      ? FontWeight.w600
+                                      : FontWeight.normal,
+                                ),
+                              ),
+                              IconButton(
+                                tooltip: 'Adjust day',
+                                icon: const Icon(Icons.history_toggle_off_outlined),
+                                onPressed: () => _openDayEditor(date),
+                              ),
+                            ],
                           ),
                         );
                       },
@@ -686,6 +696,33 @@ class _AdminScreenState extends State<AdminScreen>
       );
     } finally {
       if (mounted) setState(() => _rangeSummaryLoading = false);
+    }
+  }
+
+  Future<void> _openDayEditor(DateTime date) async {
+    final doctor = _selectedDoctor;
+    if (doctor == null) return;
+    final userId = doctor['id'] as String;
+    final userName = (doctor['name'] as String?) ??
+        (doctor['fullName'] as String?) ??
+        (doctor['email'] as String?) ??
+        'Doctor';
+    final updated = await showModalBottomSheet<bool>(
+          context: context,
+          isScrollControlled: true,
+          useSafeArea: true,
+          enableDrag: false,
+          isDismissible: false,
+          builder: (_) => AttendanceEditorSheet(
+            api: _api,
+            userId: userId,
+            userName: userName,
+            targetDate: date,
+          ),
+        ) ??
+        false;
+    if (updated) {
+      await _loadRangeSummary();
     }
   }
 
@@ -1337,6 +1374,371 @@ class _UsersManagerState extends State<_UsersManager> {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class AttendanceEditorSheet extends StatefulWidget {
+  final ApiClient api;
+  final String userId;
+  final String userName;
+  final DateTime targetDate;
+
+  const AttendanceEditorSheet({
+    required this.api,
+    required this.userId,
+    required this.userName,
+    required this.targetDate,
+    super.key,
+  });
+
+  @override
+  State<AttendanceEditorSheet> createState() => _AttendanceEditorSheetState();
+}
+
+class _AttendanceEditorSheetState extends State<AttendanceEditorSheet> {
+  bool _loading = true;
+  bool _saving = false;
+  bool _dirty = false;
+  List<Map<String, dynamic>> _logs = const [];
+
+  late final DateTime _dayStart;
+  late final DateTime _dayEnd;
+
+  @override
+  void initState() {
+    super.initState();
+    final d = widget.targetDate;
+    _dayStart = DateTime(d.year, d.month, d.day);
+    _dayEnd = _dayStart.add(const Duration(days: 1));
+    _loadLogs();
+  }
+
+  Future<void> _loadLogs() async {
+    setState(() => _loading = true);
+    try {
+      final logs = await widget.api.adminAttendanceLogs(
+        userId: widget.userId,
+        start: _dayStart,
+        end: _dayEnd,
+      );
+      if (!mounted) return;
+      setState(() => _logs = logs);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to load attendance entries.')),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _editLog({Map<String, dynamic>? existing}) async {
+    final isNew = existing == null;
+    DateTime localTime;
+    if (existing != null) {
+      localTime = DateTime.parse(existing['timestampUtc'] as String).toLocal();
+    } else {
+      final nowTime = TimeOfDay.now();
+      final roundedMinute = nowTime.minute - (nowTime.minute % 5);
+      localTime = DateTime(
+        _dayStart.year,
+        _dayStart.month,
+        _dayStart.day,
+        nowTime.hour,
+        roundedMinute,
+      );
+    }
+    String actionValue = (existing?['action'] as String?) ?? 'IN';
+    final notesCtrl = TextEditingController(text: (existing?['notes'] as String?) ?? '');
+
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            Future<void> pickTime() async {
+              final picked = await showTimePicker(
+                context: context,
+                initialTime: TimeOfDay.fromDateTime(localTime),
+              );
+              if (picked != null) {
+                setDialogState(() {
+                  localTime = DateTime(
+                    localTime.year,
+                    localTime.month,
+                    localTime.day,
+                    picked.hour,
+                    picked.minute,
+                  );
+                });
+              }
+            }
+
+            return AlertDialog(
+              title: Text(isNew ? 'Add attendance entry' : 'Edit attendance entry'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DropdownButtonFormField<String>(
+                      initialValue: actionValue,
+                      items: const [
+                        DropdownMenuItem(value: 'IN', child: Text('IN')),
+                        DropdownMenuItem(value: 'OUT', child: Text('OUT')),
+                      ],
+                      onChanged: (value) {
+                        if (value == null) return;
+                        setDialogState(() => actionValue = value);
+                      },
+                      decoration: const InputDecoration(labelText: 'Action'),
+                    ),
+                    const SizedBox(height: 12),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Time'),
+                      subtitle: Text(DateFormat('hh:mm a').format(localTime)),
+                      trailing: TextButton(
+                        onPressed: pickTime,
+                        child: const Text('Change'),
+                      ),
+                    ),
+                    TextField(
+                      controller: notesCtrl,
+                      maxLength: 240,
+                      decoration: const InputDecoration(
+                        labelText: 'Notes (optional)',
+                        counterText: '',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(dialogContext, {
+                      'action': actionValue,
+                      'timestamp': DateTime(
+                        _dayStart.year,
+                        _dayStart.month,
+                        _dayStart.day,
+                        localTime.hour,
+                        localTime.minute,
+                      ),
+                      'notes': notesCtrl.text.trim(),
+                    });
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+    notesCtrl.dispose();
+    if (result == null || !mounted) return;
+
+    setState(() => _saving = true);
+    try {
+      if (isNew) {
+        await widget.api.adminCreateAttendanceLog(
+          userId: widget.userId,
+          action: result['action'] as String,
+          timestamp: (result['timestamp'] as DateTime),
+          notes: (result['notes'] as String).isEmpty ? null : result['notes'] as String,
+        );
+      } else {
+        await widget.api.adminUpdateAttendanceLog(
+          id: existing['id'] as String,
+          action: result['action'] as String,
+          timestamp: result['timestamp'] as DateTime,
+          notes: (result['notes'] as String).isEmpty ? null : result['notes'] as String,
+        );
+      }
+      if (!mounted) return;
+      _dirty = true;
+      await _loadLogs();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(isNew ? 'Entry added.' : 'Entry updated.')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to save entry.')),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _deleteLog(String id) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete entry?'),
+        content: const Text('This attendance entry will be permanently removed.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    setState(() => _saving = true);
+    try {
+      await widget.api.adminDeleteAttendanceLog(id);
+      if (!mounted) return;
+      _dirty = true;
+      await _loadLogs();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Entry removed.')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to delete entry.')),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final headerDate = DateFormat('EEE, MMM d, yyyy').format(_dayStart);
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: SizedBox(
+        height: MediaQuery.of(context).size.height * 0.8,
+        child: Column(
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              height: 4,
+              width: 48,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            ListTile(
+              title: Text('Adjust attendance'),
+              subtitle: Text('${widget.userName} • $headerDate'),
+              trailing: IconButton(
+                tooltip: 'Close',
+                onPressed: _saving
+                    ? null
+                    : () => Navigator.pop(context, _dirty),
+                icon: const Icon(Icons.close),
+              ),
+            ),
+            if (_saving) const LinearProgressIndicator(minHeight: 2),
+            Expanded(
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _logs.isEmpty
+                      ? const Center(child: Text('No entries for this day.'))
+                      : ListView.separated(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          itemBuilder: (context, index) {
+                            final log = _logs[index];
+                            final localTime =
+                                DateTime.parse(log['timestampUtc'] as String).toLocal();
+                            final action = (log['action'] as String).toUpperCase();
+                            final notes = log['notes'] as String?;
+                            final source = (log['source'] as String?) ?? 'ADMIN';
+                            return Card(
+                              child: ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor: action == 'IN'
+                                      ? Colors.green.withValues(alpha: 0.2)
+                                      : Colors.red.withValues(alpha: 0.2),
+                                  foregroundColor:
+                                      action == 'IN' ? Colors.green : Colors.red,
+                                  child: Text(
+                                    action,
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                                  ),
+                                ),
+                                title: Text(DateFormat('hh:mm a').format(localTime)),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      DateFormat('MMM d, yyyy • HH:mm').format(localTime),
+                                    ),
+                                    Text('Source: $source'),
+                                    if (notes != null && notes.isNotEmpty)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 4),
+                                        child: Text(
+                                          notes,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(color: Theme.of(context).colorScheme.outline),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                trailing: PopupMenuButton<String>(
+                                  onSelected: (value) {
+                                    switch (value) {
+                                      case 'edit':
+                                        _editLog(existing: log);
+                                        break;
+                                      case 'delete':
+                                        _deleteLog(log['id'] as String);
+                                        break;
+                                    }
+                                  },
+                                  itemBuilder: (context) => const [
+                                    PopupMenuItem(
+                                      value: 'edit',
+                                      child: Text('Edit'),
+                                    ),
+                                    PopupMenuItem(
+                                      value: 'delete',
+                                      child: Text('Delete'),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                          separatorBuilder: (_, __) => const SizedBox(height: 8),
+                          itemCount: _logs.length,
+                        ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: FilledButton.icon(
+                onPressed: _saving ? null : () => _editLog(),
+                icon: const Icon(Icons.add),
+                label: const Text('Add manual entry'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

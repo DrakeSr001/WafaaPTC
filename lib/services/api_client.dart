@@ -377,6 +377,57 @@ class ApiClient {
     return Map<String, dynamic>.from(r.data as Map);
   }
 
+  Future<List<Map<String, dynamic>>> adminAttendanceLogs({
+    required String userId,
+    required DateTime start,
+    required DateTime end,
+  }) async {
+    final r = await dio.get(
+      '/admin/attendance/logs',
+      queryParameters: {
+        'userId': userId,
+        'start': start.toUtc().toIso8601String(),
+        'end': end.toUtc().toIso8601String(),
+      },
+    );
+    final list = (r.data as List).cast<dynamic>();
+    return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  Future<Map<String, dynamic>> adminCreateAttendanceLog({
+    required String userId,
+    required String action,
+    required DateTime timestamp,
+    String? notes,
+  }) async {
+    final r = await dio.post('/admin/attendance/logs', data: {
+      'userId': userId,
+      'action': action,
+      'timestamp': timestamp.toUtc().toIso8601String(),
+      if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
+    });
+    return Map<String, dynamic>.from(r.data as Map);
+  }
+
+  Future<Map<String, dynamic>> adminUpdateAttendanceLog({
+    required String id,
+    String? action,
+    DateTime? timestamp,
+    String? notes,
+  }) async {
+    final data = <String, dynamic>{
+      if (action != null) 'action': action,
+      if (timestamp != null) 'timestamp': timestamp.toUtc().toIso8601String(),
+    };
+    if (notes != null) data['notes'] = notes.trim().isEmpty ? null : notes.trim();
+    final r = await dio.patch('/admin/attendance/logs/$id', data: data);
+    return Map<String, dynamic>.from(r.data as Map);
+  }
+
+  Future<void> adminDeleteAttendanceLog(String id) async {
+    await dio.delete('/admin/attendance/logs/$id');
+  }
+
   Uint8List _asBytes(dynamic data) {
     if (data is Uint8List) return data;
     if (data is List<int>) return Uint8List.fromList(List<int>.from(data));
