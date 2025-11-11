@@ -428,6 +428,15 @@ class ApiClient {
     await dio.delete('/admin/attendance/logs/$id');
   }
 
+  Future<List<Map<String, dynamic>>> adminEventLogs({int limit = 50}) async {
+    final r = await dio.get(
+      '/admin/event-logs',
+      queryParameters: {'limit': limit},
+    );
+    final list = (r.data as List).cast<dynamic>();
+    return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
   Uint8List _asBytes(dynamic data) {
     if (data is Uint8List) return data;
     if (data is List<int>) return Uint8List.fromList(List<int>.from(data));

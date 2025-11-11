@@ -60,7 +60,7 @@ class _AdminScreenState extends State<AdminScreen>
     _selectedMonth = DateTime(now.year, now.month, 1);
     _rangeStart = _selectedMonth;
     _rangeEnd = DateTime(now.year, now.month, now.day);
-    _tab = TabController(length: 4, vsync: this); // was 3
+    _tab = TabController(length: 5, vsync: this); // now 5 tabs
     _loadDoctors();
   }
 
@@ -817,7 +817,8 @@ Configure the kiosk app with both values, then sync once while online. The app c
             Tab(icon: Icon(Icons.download), text: 'Exports'),
             Tab(icon: Icon(Icons.person_add), text: 'Create User'),
             Tab(icon: Icon(Icons.devices_other), text: 'Create Device'),
-            Tab(icon: Icon(Icons.manage_accounts), text: 'Manage'), // NEW
+            Tab(icon: Icon(Icons.manage_accounts), text: 'Manage'),
+            Tab(icon: Icon(Icons.warning_amber_rounded), text: 'Logs'),
           ],
         ),
         actions: [
@@ -984,7 +985,110 @@ Configure the kiosk app with both values, then sync once while online. The app c
               ),
             ),
           ),
+
+          // ======== Tab 5: Logs ========
+          _EventLogsView(api: _api),
         ],
+      ),
+    );
+  }
+}
+
+class _EventLogsView extends StatefulWidget {
+  final ApiClient api;
+  const _EventLogsView({required this.api});
+
+  @override
+  State<_EventLogsView> createState() => _EventLogsViewState();
+}
+
+class _EventLogsViewState extends State<_EventLogsView> {
+  bool _loading = true;
+  List<Map<String, dynamic>> _logs = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    try {
+      final data = await widget.api.adminEventLogs(limit: 100);
+      setState(() => _logs = data);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to load logs.')),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_logs.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('No issues recorded recently.'),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _load,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Refresh'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: _logs.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        itemBuilder: (context, index) {
+          final log = _logs[index];
+          final user = log['user'] as Map<String, dynamic>?;
+          final createdAt = DateTime.tryParse(log['createdAt'] as String? ?? '');
+          final status = (log['status'] as String?) ?? 'error';
+          final color = status == 'error'
+              ? Theme.of(context).colorScheme.error
+              : Theme.of(context).colorScheme.primary;
+          return Card(
+            child: ListTile(
+              leading: Icon(
+                status == 'error' ? Icons.error_outline : Icons.check_circle_outline,
+                color: color,
+              ),
+              title: Text(log['action'] as String? ?? 'Unknown action'),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (log['message'] != null)
+                    Text(log['message'] as String),
+                  if (user != null)
+                    Text('${user['name'] ?? 'Unknown'} • ${user['email'] ?? ''}'),
+                  if (createdAt != null)
+                    Text(DateFormat('MMM d, yyyy hh:mm a').format(createdAt.toLocal())),
+                ],
+              ),
+              trailing: IconButton(
+                icon: const Icon(Icons.refresh),
+                tooltip: 'Reload',
+                onPressed: _load,
+              ),
+            ),
+          );
+        },
       ),
     );
   }
